@@ -1,0 +1,160 @@
+:root {
+  --bg-color: #0f111a;
+  --card-bg: #1a1d27;
+  --text-main: #ffffff;
+  --text-muted: #8b92a5;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --border: #2e3243;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+}
+
+.card {
+  background: var(--card-bg);
+  padding: 30px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  text-align: center;
+}
+
+h2 {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-color);
+  color: var(--text-main);
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.divider {
+  margin: 20px 0;
+  position: relative;
+  text-align: center;
+}
+
+.divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+
+.divider span {
+  background: var(--card-bg);
+  padding: 0 10px;
+  position: relative;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.join-form {
+  margin-top: 10px;
+}
+
+/* Room UI Setup */
+.room-container {
+  max-width: 1200px;
+  width: 90vw;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card-bg);
+  padding: 15px 20px;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.copy-btn {
+  width: auto;
+  padding: 6px 12px;
+  margin-left: 15px;
+  font-size: 14px;
+}
+
+.editor-placeholder {
+  flex: 1;
+  background: var(--bg-color);
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.sub-text {
+  font-size: 14px;
+  opacity: 0.7;
+}
