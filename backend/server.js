@@ -5,15 +5,10 @@
  * HTTP server, each on its own path so they don't collide:
  *
  *   1. Express REST API        -> /api/execute   (Judge0 proxy)
- *   2. Socket.io                -> /socket.io/*   (room presence +
+ *   2. Socket.io               -> /socket.io/*   (room presence +
  *                                                   WebRTC signaling)
  *   3. Raw WebSocket (y-websocket) -> /yjs/*       (Yjs CRDT sync for
  *                                                   the Monaco editor)
- *
- * Yjs sync intentionally does NOT go through Socket.io: y-websocket
- * ships a battle-tested sync protocol (docs, awareness) that expects
- * a plain `ws` connection, so we mount it separately and let it
- * share the same HTTP server/port via the "upgrade" event.
  * ---------------------------------------------------------------
  */
 require("dotenv").config();
@@ -35,9 +30,9 @@ const PORT = process.env.PORT || 4000;
 // -----------------------------------------------------------------
 const app = express();
 
-// FIX 1: Open CORS for Express to allow Codespaces URLs to connect
+// Open CORS for public client applications (Vercel, GitHub Pages, etc.)
 app.use(cors({ origin: "*", credentials: false }));
-app.use(express.json({ limit: "2mb" })); // generous limit for larger source files
+app.use(express.json({ limit: "2mb" })); 
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 app.use("/api", judge0Router);
@@ -47,10 +42,9 @@ const httpServer = http.createServer(app);
 // -----------------------------------------------------------------
 // Socket.io: room presence + WebRTC signaling
 // -----------------------------------------------------------------
-// FIX 2: Open CORS for Socket.io to allow Codespaces URLs to connect
 const io = new Server(httpServer, {
   cors: { origin: "*", methods: ["GET", "POST"] },
-  path: "/socket.io", // explicit, so it never fights with /yjs upgrades
+  path: "/socket.io", 
 });
 
 io.on("connection", (socket) => {
@@ -67,8 +61,6 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     const users = roomManager.joinRoom(roomId, socket.id, currentUsername);
 
-    // Tell everyone else in the room a new peer arrived (used to kick
-    // off WebRTC offers) and send the joining user the current roster.
     socket.to(roomId).emit("room:peer-joined", { socketId: socket.id, username: currentUsername });
     io.to(roomId).emit("room:users", users);
   });
@@ -119,19 +111,15 @@ yjsWss.on("connection", (conn, req) => {
 
 // Manually route "upgrade" requests
 httpServer.on("upgrade", (req, socket, head) => {
-  const { pathname } = new URL(req.url, `http://${req.headers.host}`);
-
-  if (pathname.startsWith("/yjs")) {
+  // FIXED: Safer URL route detection that avoids parsing errors from proxy routing headers
+  if (req.url && req.url.startsWith("/yjs")) {
     yjsWss.handleUpgrade(req, socket, head, (ws) => {
       yjsWss.emit("connection", ws, req);
     });
   }
 });
 
-// FIX 3: Bind to "0.0.0.0" so Docker exposes the port to Codespaces
+// Listening configuration optimized for Render container environment
 httpServer.listen(PORT, "0.0.0.0", () => {
-  console.log(`code-collab backend listening on port ${PORT} (0.0.0.0)`);
-  console.log(`  - REST API:        http://0.0.0.0:${PORT}/api`);
-  console.log(`  - Socket.io:       ws://0.0.0.0:${PORT}/socket.io`);
-  console.log(`  - Yjs websocket:   ws://0.0.0.0:${PORT}/yjs/<roomId>`);
+  console.log(`Production server running securely on port ${PORT}`);
 });
