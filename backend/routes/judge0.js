@@ -1,9 +1,8 @@
 /**
- * routes/judge0.js
+ * routes/judge0.js (REWRITTEN FOR PISTON API)
  * ---------------------------------------------------------------
- * Proxies code-execution requests to Judge0. Keeping this on the
- * server means the API key never has to be exposed to the browser,
- * and lets us normalize the response shape for the frontend.
+ * Proxies code-execution requests to the FREE Piston API.
+ * This completely replaces Judge0 and RapidAPI, requiring NO keys.
  * ---------------------------------------------------------------
  */
 const express = require("express");
@@ -11,32 +10,27 @@ const axios = require("axios");
 
 const router = express.Router();
 
-// Map friendly language names coming from the editor's language
-// selector to Judge0's numeric language IDs.
-// Full list: https://ce.judge0.com/#statuses-and-languages-language-get
-const LANGUAGE_ID_MAP = {
-  cpp: 54, // C++ (GCC 9.2.0)
-  "c++": 54,
-  python: 71, // Python (3.8.1)
-  python3: 71,
-  javascript: 63, // Node.js (12.14.0)
-  java: 62, // Java (OpenJDK 13.0.1)
+// 1. Map friendly language names to Piston's required format.
+// Using "*" tells Piston to automatically use the latest installed version.
+const PISTON_LANGUAGE_MAP = {
+  cpp: { language: "c++", version: "*" },
+  "c++": { language: "c++", version: "*" },
+  python: { language: "python", version: "*" },
+  python3: { language: "python", version: "*" },
+  javascript: { language: "javascript", version: "*" },
+  java: { language: "java", version: "*" },
 };
 
-const JUDGE0_API_URL = process.env.JUDGE0_API_URL || "https://judge0-ce.p.rapidapi.com";
-const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY || "";
-const JUDGE0_API_HOST = process.env.JUDGE0_API_HOST || "judge0-ce.p.rapidapi.com";
-
-// Build the correct headers depending on whether we're hitting the
-// RapidAPI-hosted Judge0 or a self-hosted instance.
-function buildHeaders() {
-  const headers = { "Content-Type": "application/json" };
-  if (JUDGE0_API_KEY) {
-    headers["X-RapidAPI-Key"] = JUDGE0_API_KEY;
-    headers["X-RapidAPI-Host"] = JUDGE0_API_HOST;
-  }
-  return headers;
-}
+// 2. We keep the legacy map purely so your frontend language 
+// dropdown doesn't break if it expects this exact structure.
+const LEGACY_JUDGE0_MAP = {
+  cpp: 54,
+  "c++": 54,
+  python: 71,
+  python3: 71,
+  javascript: 63,
+  java: 62,
+};
 
 /**
  * POST /api/execute
@@ -50,57 +44,65 @@ router.post("/execute", async (req, res) => {
       return res.status(400).json({ error: "`language` and `code` are required." });
     }
 
-    const languageId = LANGUAGE_ID_MAP[language.toLowerCase()];
-    if (!languageId) {
+    // Look up the Piston language configuration
+    const pistonLang = PISTON_LANGUAGE_MAP[language.toLowerCase()];
+    if (!pistonLang) {
       return res.status(400).json({
-        error: `Unsupported language "${language}". Supported: ${Object.keys(LANGUAGE_ID_MAP).join(", ")}`,
+        error: `Unsupported language "${language}". Supported: ${Object.keys(PISTON_LANGUAGE_MAP).join(", ")}`,
       });
     }
 
-    if (!JUDGE0_API_KEY) {
-      // Fail gracefully with a clear message instead of a confusing 401
-      // from Judge0 - lets the frontend show something actionable.
-      return res.status(501).json({
-        error:
-          "Judge0 API key not configured on the server. Set JUDGE0_API_KEY (and JUDGE0_API_URL/JUDGE0_API_HOST if self-hosting) in your environment.",
-      });
-    }
-
-    // wait=true makes Judge0 execute synchronously and return the
-    // result directly (simpler than polling a submission token).
-    const submissionUrl = `${JUDGE0_API_URL}/submissions?base64_encoded=false&wait=true`;
-
+    // Call the FREE Piston API instead of Judge0
     const { data } = await axios.post(
-      submissionUrl,
+      "https://emkc.org/api/v2/piston/execute",
       {
-        source_code: code,
-        language_id: languageId,
-        stdin,
+        language: pistonLang.language,
+        version: pistonLang.version,
+        files: [{ content: code }],
+        stdin: stdin,
       },
-      { headers: buildHeaders(), timeout: 20000 }
+      { timeout: 20000 }
     );
 
+    // Piston returns data in a different shape (data.run and data.compile).
+    // We map it back to the exact shape your frontend expects from Judge0.
+    const run = data.run || {};
+    const compile = data.compile || {};
+    
+    // Judge0 status IDs: 3 = Accepted, 6 = Compilation Error, 11 = Runtime Error
+    let statusId = 3; 
+    let description = "Accepted";
+
+    if (compile.code !== 0 && compile.code != null) {
+      statusId = 6;
+      description = "Compilation Error";
+    } else if (run.code !== 0) {
+      statusId = 11;
+      description = "Runtime Error";
+    }
+
     return res.json({
-      stdout: data.stdout,
-      stderr: data.stderr,
-      compile_output: data.compile_output,
-      message: data.message,
-      status: data.status, // { id, description }
-      time: data.time,
-      memory: data.memory,
+      stdout: run.stdout || "",
+      stderr: run.stderr || "",
+      compile_output: compile.stderr || "",
+      message: run.output || "", // Piston combines stdout/stderr into output
+      status: { id: statusId, description: description },
+      time: 0, // Piston doesn't return execution time directly
+      memory: 0,
     });
+
   } catch (err) {
-    console.error("Judge0 execution error:", err?.response?.data || err.message);
+    console.error("Piston execution error:", err?.response?.data || err.message);
     return res.status(502).json({
-      error: "Failed to execute code via Judge0.",
+      error: "Failed to execute code via Piston.",
       details: err?.response?.data || err.message,
     });
   }
 });
 
-// GET /api/execute/languages - lets the frontend build its language dropdown
+// GET /api/execute/languages - frontend dropdown builder
 router.get("/languages", (_req, res) => {
-  res.json(LANGUAGE_ID_MAP);
+  res.json(LEGACY_JUDGE0_MAP);
 });
 
 module.exports = router;

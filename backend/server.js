@@ -16,7 +16,6 @@
  * share the same HTTP server/port via the "upgrade" event.
  * ---------------------------------------------------------------
  */
-
 require("dotenv").config();
 
 const http = require("http");
@@ -30,13 +29,14 @@ const judge0Router = require("./routes/judge0");
 const roomManager = require("./utils/roomManager");
 
 const PORT = process.env.PORT || 4000;
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
 // -----------------------------------------------------------------
 // Express app + REST routes
 // -----------------------------------------------------------------
 const app = express();
-app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
+
+// FIX 1: Open CORS for Express to allow Codespaces URLs to connect
+app.use(cors({ origin: "*", credentials: false }));
 app.use(express.json({ limit: "2mb" })); // generous limit for larger source files
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
@@ -47,8 +47,9 @@ const httpServer = http.createServer(app);
 // -----------------------------------------------------------------
 // Socket.io: room presence + WebRTC signaling
 // -----------------------------------------------------------------
+// FIX 2: Open CORS for Socket.io to allow Codespaces URLs to connect
 const io = new Server(httpServer, {
-  cors: { origin: CLIENT_ORIGIN, methods: ["GET", "POST"] },
+  cors: { origin: "*", methods: ["GET", "POST"] },
   path: "/socket.io", // explicit, so it never fights with /yjs upgrades
 });
 
@@ -82,23 +83,16 @@ io.on("connection", (socket) => {
   });
 
   // ---- Code execution broadcast ---------------------------------
-  // Optional: broadcast run results to everyone in the room so all
-  // collaborators see the terminal output, not just the runner.
   socket.on("terminal:broadcast", ({ roomId, result }) => {
     socket.to(roomId).emit("terminal:result", result);
   });
 
-  // ---- WebRTC signaling (used by simple-peer on the client) ------
-  // simple-peer just needs an arbitrary transport to exchange SDP
-  // offers/answers and ICE candidates - Socket.io works well here.
+  // ---- WebRTC signaling ------------------------------------------
   socket.on("webrtc:signal", ({ to, from, signal }) => {
     io.to(to).emit("webrtc:signal", { from, signal });
   });
 
-  // ---- Whiteboard sync (lightweight broadcast) -------------------
-  // The Yjs/y-websocket layer already syncs the editor; for the
-  // whiteboard we broadcast tldraw's own change events directly
-  // through Socket.io for simplicity.
+  // ---- Whiteboard sync -------------------------------------------
   socket.on("whiteboard:update", ({ roomId, snapshot }) => {
     socket.to(roomId).emit("whiteboard:update", snapshot);
   });
@@ -120,14 +114,10 @@ io.on("connection", (socket) => {
 const yjsWss = new WebSocketServer({ noServer: true });
 
 yjsWss.on("connection", (conn, req) => {
-  // setupWSConnection reads the room name from the URL path, e.g.
-  // ws://host/yjs/<roomId> -> docName "<roomId>"
   setupWSConnection(conn, req);
 });
 
-// Manually route "upgrade" requests: anything under /yjs goes to the
-// Yjs websocket server; everything else (e.g. /socket.io) is left
-// alone so Engine.IO's own upgrade handler can pick it up.
+// Manually route "upgrade" requests
 httpServer.on("upgrade", (req, socket, head) => {
   const { pathname } = new URL(req.url, `http://${req.headers.host}`);
 
@@ -136,14 +126,12 @@ httpServer.on("upgrade", (req, socket, head) => {
       yjsWss.emit("connection", ws, req);
     });
   }
-  // Note: no `else socket.destroy()` here - Socket.io/Engine.IO
-  // registers its own "upgrade" listener on this same httpServer
-  // and will handle the /socket.io path itself.
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`code-collab backend listening on port ${PORT}`);
-  console.log(`  - REST API:        http://localhost:${PORT}/api`);
-  console.log(`  - Socket.io:       ws://localhost:${PORT}/socket.io`);
-  console.log(`  - Yjs websocket:   ws://localhost:${PORT}/yjs/<roomId>`);
+// FIX 3: Bind to "0.0.0.0" so Docker exposes the port to Codespaces
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`code-collab backend listening on port ${PORT} (0.0.0.0)`);
+  console.log(`  - REST API:        http://0.0.0.0:${PORT}/api`);
+  console.log(`  - Socket.io:       ws://0.0.0.0:${PORT}/socket.io`);
+  console.log(`  - Yjs websocket:   ws://0.0.0.0:${PORT}/yjs/<roomId>`);
 });
