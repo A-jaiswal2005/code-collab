@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 
-const YWEBSOCKET_URL = import.meta.env.VITE_YWEBSOCKET_URL || "ws://localhost:4000/yjs";
+const YWEBSOCKET_URL = import.meta.env.VITE_YWEBSOCKET_URL || "wss://code-collab-n4p0.onrender.com/yjs";
 
 /**
  * useYjs
