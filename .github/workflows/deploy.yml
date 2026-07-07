@@ -2,16 +2,14 @@ name: Deploy Frontend to GitHub Pages
 
 on:
   push:
-    branches: ["main"] # Change this to "master" if your default branch is master
-  workflow_dispatch: # Allows you to run this manually from the Actions tab
+    branches: ["main"] 
+  workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -23,7 +21,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     
-    # CRUCIAL: Tells GitHub to run these commands inside your frontend folder
     defaults:
       run:
         working-directory: ./frontend
@@ -35,17 +32,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
+          # We removed the strict caching requirements here!
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
 
       - name: Install dependencies
-        run: npm ci
+        # Swapped from 'npm ci' to 'npm install' so it doesn't demand a lockfile
+        run: npm install
 
       - name: Build project
         run: npm run build
         env:
-          # Put your real Render URLs here so they get baked into the build!
           VITE_BACKEND_URL: ""
           VITE_YWEBSOCKET_URL: ""
 
