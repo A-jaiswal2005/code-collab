@@ -4,7 +4,7 @@ import Whiteboard from "../Whiteboard/Whiteboard.jsx";
 import Sidebar from "../Sidebar/Sidebar.jsx";
 import { useRoom } from "../../context/RoomContext.jsx";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://code-collab-n4p0.onrender.com";
 
 export default function MainLayout() {
   const { socket, roomId } = useRoom();
