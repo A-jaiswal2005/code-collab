@@ -46,8 +46,8 @@ jobs:
         run: npm run build
         env:
           # Put your real Render URLs here so they get baked into the build!
-          VITE_BACKEND_URL: https://code-collab-xyz.onrender.com
-          VITE_YWEBSOCKET_URL: wss://code-collab-xyz.onrender.com/yjs
+          VITE_BACKEND_URL: ""
+          VITE_YWEBSOCKET_URL: ""
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
