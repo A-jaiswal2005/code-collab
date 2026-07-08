@@ -22,6 +22,34 @@ export default function Whiteboard() {
   const editorRef = useRef(null);
   const applyingRemote = useRef(false);
 
+  // --- NEW FIX: Prevent Tldraw from swallowing Monaco keystrokes ---
+  useEffect(() => {
+    const blockTldrawShortcuts = (e) => {
+      const target = e.target;
+      
+      // Check if the user is focused on a standard input or Monaco's hidden textarea
+      const isStandardInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      const isMonaco = target.classList?.contains('inputarea');
+
+      if (isStandardInput || isMonaco) {
+        // stopImmediatePropagation prevents ANY other listeners (like Tldraw's) 
+        // on the window from firing for this specific keystroke.
+        e.stopImmediatePropagation();
+      }
+    };
+
+    // We MUST use the capture phase (the third argument set to `true`) 
+    // to catch the event BEFORE it bubbles down to Tldraw's internal listeners.
+    window.addEventListener('keydown', blockTldrawShortcuts, true);
+    window.addEventListener('keyup', blockTldrawShortcuts, true);
+
+    return () => {
+      window.removeEventListener('keydown', blockTldrawShortcuts, true);
+      window.removeEventListener('keyup', blockTldrawShortcuts, true);
+    };
+  }, []);
+  // -----------------------------------------------------------------
+
   const handleMount = useCallback(
     (editor) => {
       editorRef.current = editor;
