@@ -59,7 +59,13 @@ export default function CodeEditor({ language, onLanguageChange, editorRef }) {
   }, [editorReady, provider, getYText, editorRef]);
 
   return (
-    <div style={styles.wrapper}>
+    <div 
+      style={styles.wrapper}
+      // --- THE FIX: Stop keystrokes from bubbling up to Tldraw ---
+      onKeyDown={(e) => e.stopPropagation()} 
+      onKeyUp={(e) => e.stopPropagation()}
+      // -----------------------------------------------------------
+    >
       <div style={styles.toolbar}>
         <select
           style={styles.select}
