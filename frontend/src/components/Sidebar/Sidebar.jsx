@@ -6,9 +6,9 @@ import { useWebRTC } from "../../hooks/useWebRTC.js";
 export default function Sidebar() {
   const { users, socket, leaveRoom } = useRoom();
   
-  // NEW: Destructured cameraOff and toggleCamera from the hook
   const { 
     remoteStreams, 
+    localStream, // 1. GRAB YOUR LOCAL STREAM HERE
     muted, 
     toggleMute, 
     cameraOff, 
@@ -23,7 +23,6 @@ export default function Sidebar() {
         <div style={styles.sectionHeader}>
           <span>Participants ({users.length})</span>
           
-          {/* NEW: Grouped the toggle buttons in a flex row */}
           <div style={{ display: "flex", gap: "8px" }}>
             <button 
               style={styles.muteBtn} 
@@ -43,21 +42,28 @@ export default function Sidebar() {
         </div>
 
         <div style={styles.tileList}>
-          {users.map((u) => (
-            <VideoTile
-              key={u.socketId}
-              username={u.username}
-              isLocal={u.socketId === socket?.id}
-              muted={u.socketId === socket?.id ? muted : false}
-              stream={remoteStreams[u.socketId]}
-            />
-          ))}
+          {users.map((u) => {
+            const isLocal = u.socketId === socket?.id;
+
+            return (
+              <VideoTile
+                key={u.socketId}
+                username={u.username}
+                isLocal={isLocal}
+                muted={isLocal ? muted : false}
+                // 2. PASS LOCAL STREAM FOR YOU, REMOTE FOR OTHERS
+                stream={isLocal ? localStream : remoteStreams[u.socketId]}
+                // 3. PASS THE CAMERA TOGGLE STATE FOR YOUR TILE
+                isVideoOn={isLocal ? !cameraOff : true}
+              />
+            );
+          })}
         </div>
 
         {micError && <p style={styles.micWarning}>Media unavailable: {micError}</p>}
       </div>
 
-      {/* --- Leave Room (Pushed to bottom) --- */}
+      {/* --- Leave Room --- */}
       <button style={styles.leaveBtn} onClick={leaveRoom}>
         Leave Room
       </button>
@@ -65,6 +71,7 @@ export default function Sidebar() {
   );
 }
 
+// ... your styles remain exactly the same
 const styles = {
   wrapper: {
     width: "100%",
