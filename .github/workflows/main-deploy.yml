@@ -1,4 +1,4 @@
-name: Deploy Frontend to GitHub Pages
+name: Main Deploy 
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     
     defaults:
       run:
