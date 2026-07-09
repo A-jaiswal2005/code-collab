@@ -4,9 +4,17 @@ import { useRoom } from "../../context/RoomContext.jsx";
 import { useWebRTC } from "../../hooks/useWebRTC.js";
 
 export default function Sidebar() {
-  // Removed roomId, username, and onRunCode/terminal props since they moved elsewhere
   const { users, socket, leaveRoom } = useRoom();
-  const { remoteStreams, muted, toggleMute, micError } = useWebRTC();
+  
+  // NEW: Destructured cameraOff and toggleCamera from the hook
+  const { 
+    remoteStreams, 
+    muted, 
+    toggleMute, 
+    cameraOff, 
+    toggleCamera, 
+    micError 
+  } = useWebRTC();
 
   return (
     <aside style={styles.wrapper}>
@@ -14,9 +22,24 @@ export default function Sidebar() {
       <div style={styles.section}>
         <div style={styles.sectionHeader}>
           <span>Participants ({users.length})</span>
-          <button style={styles.muteBtn} onClick={toggleMute} title={muted ? "Unmute" : "Mute"}>
-            {muted ? "🔇" : "🎙️"}
-          </button>
+          
+          {/* NEW: Grouped the toggle buttons in a flex row */}
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button 
+              style={styles.muteBtn} 
+              onClick={toggleCamera} 
+              title={cameraOff ? "Turn Camera On" : "Turn Camera Off"}
+            >
+              {cameraOff ? "📷 (Off)" : "📸"}
+            </button>
+            <button 
+              style={styles.muteBtn} 
+              onClick={toggleMute} 
+              title={muted ? "Unmute" : "Mute"}
+            >
+              {muted ? "🔇" : "🎙️"}
+            </button>
+          </div>
         </div>
 
         <div style={styles.tileList}>
@@ -31,7 +54,7 @@ export default function Sidebar() {
           ))}
         </div>
 
-        {micError && <p style={styles.micWarning}>Mic unavailable: {micError}</p>}
+        {micError && <p style={styles.micWarning}>Media unavailable: {micError}</p>}
       </div>
 
       {/* --- Leave Room (Pushed to bottom) --- */}
@@ -58,7 +81,7 @@ const styles = {
     display: "flex", 
     flexDirection: "column", 
     gap: 8, 
-    flex: 1 // Allows the participant section to take available space
+    flex: 1 
   },
   sectionHeader: {
     display: "flex",
@@ -94,6 +117,6 @@ const styles = {
     borderRadius: "var(--radius)",
     fontSize: 13,
     cursor: "pointer",
-    marginTop: "auto", // Anchors the button to the bottom of the sidebar
+    marginTop: "auto", 
   },
 };
