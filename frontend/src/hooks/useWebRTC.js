@@ -28,7 +28,7 @@ export function useWebRTC() {
   useEffect(() => {
     let stream;
     navigator.mediaDevices
-      ?.getUserMedia({ audio: true, video: false })
+      ?.getUserMedia({ audio: true, video: true })
       .then((s) => {
         stream = s;
         setLocalStream(s);
