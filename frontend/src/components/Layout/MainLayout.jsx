@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import CodeEditor from "../Editor/CodeEditor.jsx";
-import Terminal from "../Editor/Terminal.jsx"; // Verify this import path matches where you moved it!
+import Terminal from "../Editor/Terminal.jsx"; 
 import Whiteboard from "../Whiteboard/Whiteboard.jsx";
 import Sidebar from "../Sidebar/Sidebar.jsx";
 import { useRoom } from "../../context/RoomContext.jsx";
@@ -16,7 +16,7 @@ export default function MainLayout() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [stdin, setStdin] = useState(""); // NEW: Added stdin state
+  const [stdin, setStdin] = useState(""); 
 
   const editorRef = useRef(null);
 
@@ -36,7 +36,6 @@ export default function MainLayout() {
       const res = await fetch(`${BACKEND_URL}/api/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // NEW: Added stdin to the payload being sent to the backend
         body: JSON.stringify({ language, code, stdin }),
       });
       const data = await res.json();
@@ -62,54 +61,66 @@ export default function MainLayout() {
   }, [socket]);
 
   return (
-    
-      
-        {/* NEW: Room code and copy button moved here */}
-        
-          code-collab
-          
-            #{roomId}
-            ⧉
-          
-        
+    <div style={styles.container}>
+      <header style={styles.topbar}>
+        {/* The section that was missing its <div> tags! */}
+        <div style={styles.brandGroup}>
+          <div style={styles.brand}>code-collab</div>
+          <div style={styles.roomBadge}>
+            <span style={styles.roomTag}>#{roomId}</span>
+            <button style={styles.copyBtn} onClick={copyRoomCode} title="Copy Room Code">⧉</button>
+          </div>
+        </div>
 
-        
-           setView("editor")}
+        <div style={styles.toggleGroup}>
+          <button
+            style={{ ...styles.toggleBtn, ...(view === "editor" ? styles.toggleActive : {}) }}
+            onClick={() => setView("editor")}
           >
-            {""} Code Editor
-          
-           setView("whiteboard")}
+            {"</>"} Code Editor
+          </button>
+          <button
+            style={{ ...styles.toggleBtn, ...(view === "whiteboard" ? styles.toggleActive : {}) }}
+            onClick={() => setView("whiteboard")}
           >
             ✏️ Whiteboard
-          
-        
-      
+          </button>
+        </div>
+      </header>
 
-      
-        {/* COLUMN 1: Editor/Whiteboard (Takes 3 parts of the screen, or 5 if whiteboard is active) */}
-        
-          
-            {/* NEW: Passed onRunCode and running down to the Editor */}
-            
-          
-          
-            
-          
-        
+      <div style={styles.body}>
+        <main style={{ ...styles.workspace, flex: view === "editor" ? 3 : 5 }}>
+          <div style={{ display: view === "editor" ? "block" : "none", height: "100%" }}>
+            <CodeEditor 
+              language={language} 
+              onLanguageChange={setLanguage} 
+              editorRef={editorRef} 
+              onRunCode={handleRunCode}
+              running={running}
+            />
+          </div>
+          <div style={{ display: view === "whiteboard" ? "block" : "none", height: "100%" }}>
+            <Whiteboard />
+          </div>
+        </main>
 
-        {/* COLUMN 2: Terminal (Only shows when in Editor mode, takes 2 parts of the screen) */}
         {view === "editor" && (
-          
-            
-          
+          <div style={styles.terminalWrapper}>
+            <Terminal 
+              running={running} 
+              result={result} 
+              error={error} 
+              stdin={stdin}
+              setStdin={setStdin}
+            />
+          </div>
         )}
 
-        {/* COLUMN 3: Sidebar (Fixed width) */}
-        
-          
-        
-      
-    
+        <div style={styles.sidebarWrapper}>
+          <Sidebar />
+        </div>
+      </div>
+    </div>
   );
 }
 
