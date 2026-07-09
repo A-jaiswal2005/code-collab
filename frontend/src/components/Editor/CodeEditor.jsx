@@ -7,14 +7,15 @@ import { useRoom } from "../../context/RoomContext.jsx";
 const LANGUAGE_OPTIONS = [
   { label: "C++", value: "cpp" },
   { label: "Python", value: "python" },
+  { label: "Java", value: "java" },
 ];
 
 const DEFAULT_SNIPPETS = {
   cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, code-collab!" << endl;\n    return 0;\n}\n`,
   python: `print("Hello, code-collab!")\n`,
+  java: `public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, code-collab!");\n    }\n}\n`,
 };
 
-// NEW: Added onRunCode and running to the props
 export default function CodeEditor({ language, onLanguageChange, editorRef, onRunCode, running }) {
   const { roomId, username } = useRoom();
   const { ydoc, provider, status } = useYjs(roomId, username);
@@ -22,8 +23,7 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
   const monacoInstanceRef = useRef(null);
   const [editorReady, setEditorReady] = useState(false);
 
-  // Yjs shared text type - every collaborator binds to the SAME
-  // named text ("monaco") inside the shared doc, so edits merge.
+  // Yjs shared text type
   const getYText = useCallback(() => ydoc.getText("monaco"), [ydoc]);
 
   const handleEditorMount = (editor, monaco) => {
@@ -31,15 +31,30 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
     editorRef.current = editor;
     setEditorReady(true);
 
-    // Seed the doc with a starter snippet only if it's empty AND
-    // we're the first client (avoids clobbering existing content).
     const yText = getYText();
     if (yText.length === 0) {
       yText.insert(0, DEFAULT_SNIPPETS[language] || "");
     }
   };
 
-  // (Re)bind Monaco <-> Yjs whenever the provider becomes available.
+  // Change default snippet when language changes
+  useEffect(() => {
+    if (!editorReady || !provider) return;
+
+    const yText = getYText();
+    const currentText = yText.toString();
+    
+    // Only swap the snippet if the editor is empty OR if it still exactly 
+    // matches one of the default snippets (prevents deleting user's actual code).
+    const isDefaultSnippet = Object.values(DEFAULT_SNIPPETS).includes(currentText);
+
+    if (currentText.trim() === "" || isDefaultSnippet) {
+      yText.delete(0, yText.length); // Clear current text
+      yText.insert(0, DEFAULT_SNIPPETS[language] || ""); // Inject new snippet
+    }
+  }, [language, editorReady, provider, getYText]);
+
+  // (Re)bind Monaco <-> Yjs
   useEffect(() => {
     if (!editorReady || !provider || !monacoInstanceRef.current) return undefined;
 
@@ -62,10 +77,8 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
   return (
     <div 
       style={styles.wrapper}
-      // --- THE FIX: Stop keystrokes from bubbling up to Tldraw ---
       onKeyDown={(e) => e.stopPropagation()} 
       onKeyUp={(e) => e.stopPropagation()}
-      // -----------------------------------------------------------
     >
       <div style={styles.toolbar}>
         <select
@@ -80,7 +93,6 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
           ))}
         </select>
         
-        {/* NEW: Grouped the status indicator and Run button together */}
         <div style={styles.rightControls}>
           <span style={styles.status}>
             <span
