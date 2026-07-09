@@ -14,7 +14,8 @@ const DEFAULT_SNIPPETS = {
   python: `print("Hello, code-collab!")\n`,
 };
 
-export default function CodeEditor({ language, onLanguageChange, editorRef }) {
+// NEW: Added onRunCode and running to the props
+export default function CodeEditor({ language, onLanguageChange, editorRef, onRunCode, running }) {
   const { roomId, username } = useRoom();
   const { ydoc, provider, status } = useYjs(roomId, username);
   const bindingRef = useRef(null);
@@ -78,15 +79,31 @@ export default function CodeEditor({ language, onLanguageChange, editorRef }) {
             </option>
           ))}
         </select>
-        <span style={styles.status}>
-          <span
+        
+        {/* NEW: Grouped the status indicator and Run button together */}
+        <div style={styles.rightControls}>
+          <span style={styles.status}>
+            <span
+              style={{
+                ...styles.dot,
+                background: status === "connected" ? "var(--success)" : "var(--warning)",
+              }}
+            />
+            {status === "connected" ? "Synced" : "Connecting..."}
+          </span>
+          
+          <button 
+            onClick={onRunCode} 
+            disabled={running}
             style={{
-              ...styles.dot,
-              background: status === "connected" ? "var(--success)" : "var(--warning)",
+              ...styles.runBtn,
+              opacity: running ? 0.7 : 1,
+              cursor: running ? "not-allowed" : "pointer"
             }}
-          />
-          {status === "connected" ? "Synced" : "Connecting..."}
-        </span>
+          >
+            {running ? "Running..." : "▶ Run Code"}
+          </button>
+        </div>
       </div>
 
       <div style={styles.editorContainer}>
@@ -126,6 +143,12 @@ const styles = {
     borderRadius: 6,
     padding: "6px 10px",
     fontSize: 13,
+    outline: "none",
+  },
+  rightControls: {
+    display: "flex",
+    alignItems: "center",
+    gap: 16,
   },
   status: {
     display: "flex",
@@ -135,5 +158,15 @@ const styles = {
     color: "var(--text-secondary)",
   },
   dot: { width: 8, height: 8, borderRadius: "50%", display: "inline-block" },
+  runBtn: {
+    background: "var(--success, #2ec271)",
+    color: "#11111b",
+    fontWeight: 700,
+    fontSize: 13,
+    padding: "6px 16px",
+    borderRadius: "6px",
+    border: "none",
+    transition: "opacity 0.2s ease",
+  },
   editorContainer: { flex: 1, minHeight: 0 },
 };
