@@ -1,19 +1,11 @@
 import React, { useEffect, useRef } from "react";
 
-/**
- * VideoTile
- * ---------------------------------------------------------------
- * Since this app is voice-only (no camera), each tile renders an
- * avatar with the user's initials instead of a <video> element, and
- * a hidden <audio> element plays the remote stream (if any).
- * ---------------------------------------------------------------
- */
 export default function VideoTile({ username, isLocal, muted, stream }) {
-  const audioRef = useRef(null);
+  const videoRef = useRef(null);
 
   useEffect(() => {
-    if (audioRef.current && stream) {
-      audioRef.current.srcObject = stream;
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
     }
   }, [stream]);
 
@@ -25,57 +17,84 @@ export default function VideoTile({ username, isLocal, muted, stream }) {
     .toUpperCase();
 
   return (
-    <div style={styles.tile}>
-      <div style={styles.avatar}>{initials}</div>
-      <div style={styles.nameRow}>
-        <span style={styles.name}>
-          {username} {isLocal && <span style={styles.youTag}>(you)</span>}
-        </span>
-        {muted && <span title="Muted" style={styles.mutedIcon}>🔇</span>}
-      </div>
-
-      {/* Remote audio is never rendered for the local user (would echo) */}
-      {!isLocal && <audio ref={audioRef} autoPlay playsInline />}
-    </div>
+    
+      {/* THE NEW VIDEO PLAYER */}
+      
+        {stream ? (
+          
+        ) : (
+          {initials}
+        )}
+        
+        {/* OVERLAY TAGS */}
+        
+          
+            {username} {isLocal && "(you)"}
+          
+          {muted && 🔇}
+        
+      
+    
   );
 }
 
 const styles = {
   tile: {
     display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "8px 10px",
-    borderRadius: "var(--radius)",
+    flexDirection: "column",
+    gap: 8,
     background: "var(--bg-tertiary)",
+    borderRadius: "var(--radius)",
+    overflow: "hidden",
     border: "1px solid var(--border-color)",
   },
-  avatar: {
-    width: 36,
-    height: 36,
+  videoContainer: {
+    position: "relative",
+    width: "100%",
+    aspectRatio: "16/9", // Standard widescreen aspect ratio
+    background: "#000",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  video: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover", // Ensures the video fills the box without stretching
+  },
+  avatarFallback: {
+    width: 60,
+    height: 60,
     borderRadius: "50%",
     background: "linear-gradient(135deg, var(--accent), #cba6f7)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 13,
+    fontSize: 20,
     fontWeight: 700,
     color: "#11111b",
-    flexShrink: 0,
   },
-  nameRow: {
+  overlay: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    right: 8,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    flex: 1,
-    minWidth: 0,
   },
-  name: {
-    fontSize: 13,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
+  nameBadge: {
+    background: "rgba(0,0,0,0.6)",
+    padding: "2px 6px",
+    borderRadius: 4,
+    fontSize: 11,
+    color: "white",
+    textShadow: "0 1px 2px rgba(0,0,0,0.8)",
   },
-  youTag: { color: "var(--text-secondary)", fontSize: 11 },
-  mutedIcon: { fontSize: 12 },
+  mutedBadge: {
+    background: "rgba(231, 76, 60, 0.8)",
+    padding: "2px 4px",
+    borderRadius: 4,
+    fontSize: 10,
+  }
 };
