@@ -8,14 +8,16 @@ export function useWebRTC() {
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState({}); 
   
-  // Media states
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
   const [micError, setMicError] = useState(null);
 
+  // NEW: State to track remote users' camera status (socketId -> boolean)
+  const [remoteCameraStates, setRemoteCameraStates] = useState({});
+
   const peersRef = useRef({}); 
 
-  // ---- 1. Acquire Media ---------------------------------
+  // ---- 1. Acquire Media ----
   useEffect(() => {
     let stream;
     navigator.mediaDevices
@@ -34,14 +36,14 @@ export function useWebRTC() {
     };
   }, []);
 
-  // ---- 2. Peer Connection Logic -------------------------
+  // ---- 2. Peer Connection Logic ----
   const createPeer = useCallback((remoteSocketId, initiator) => {
     if (!localStream) return null;
 
     const peer = new SimplePeer({
       initiator,
       trickle: true,
-      stream: localStream, // Passes both audio and video automatically
+      stream: localStream, 
     });
 
     peer.on("signal", (signal) => {
@@ -53,10 +55,7 @@ export function useWebRTC() {
     });
 
     peer.on("close", () => cleanupPeer(remoteSocketId));
-    peer.on("error", (err) => {
-      console.warn(`Peer ${remoteSocketId} error:`, err.message);
-      cleanupPeer(remoteSocketId);
-    });
+    peer.on("error", (err) => cleanupPeer(remoteSocketId));
 
     peersRef.current[remoteSocketId] = peer;
     return peer;
@@ -70,9 +69,15 @@ export function useWebRTC() {
       delete next[socketId];
       return next;
     });
+    // Cleanup their camera state when they leave
+    setRemoteCameraStates((prev) => {
+      const next = { ...prev };
+      delete next[socketId];
+      return next;
+    });
   };
 
-  // ---- 3. Socket Signaling ------------------------------
+  // ---- 3. Socket Signaling ----
   useEffect(() => {
     if (!socket || !localStream) return undefined;
 
@@ -89,14 +94,21 @@ export function useWebRTC() {
 
     const onPeerLeft = ({ socketId }) => cleanupPeer(socketId);
 
+    // NEW: Listen for remote camera toggles
+    const onPeerCameraChanged = ({ socketId, isVideoOn }) => {
+      setRemoteCameraStates((prev) => ({ ...prev, [socketId]: isVideoOn }));
+    };
+
     socket.on("room:peer-joined", onPeerJoined);
     socket.on("webrtc:signal", onSignal);
     socket.on("room:peer-left", onPeerLeft);
+    socket.on("room:peer-camera-changed", onPeerCameraChanged); // Bind new event
 
     return () => {
       socket.off("room:peer-joined", onPeerJoined);
       socket.off("webrtc:signal", onSignal);
       socket.off("room:peer-left", onPeerLeft);
+      socket.off("room:peer-camera-changed", onPeerCameraChanged);
     };
   }, [socket, localStream, createPeer]);
 
@@ -113,12 +125,12 @@ export function useWebRTC() {
     return () => Object.keys(peersRef.current).forEach(cleanupPeer);
   }, [roomId]);
 
-  // ---- 4. Media Toggles ---------------------------------
+  // ---- 4. Media Toggles ----
   const toggleMute = useCallback(() => {
     if (!localStream) return;
     const audioTrack = localStream.getAudioTracks()[0];
     if (audioTrack) {
-      audioTrack.enabled = muted; // if muted is true, enable it (turn on)
+      audioTrack.enabled = muted; 
       setMuted(!muted);
     }
   }, [localStream, muted]);
@@ -126,11 +138,20 @@ export function useWebRTC() {
   const toggleCamera = useCallback(() => {
     if (!localStream) return;
     const videoTrack = localStream.getVideoTracks()[0];
+    const nextCameraOff = !cameraOff;
+    
     if (videoTrack) {
-      videoTrack.enabled = cameraOff; // if cameraOff is true, enable it (turn on)
-      setCameraOff(!cameraOff);
+      videoTrack.enabled = cameraOff; // Enable if it was off
     }
-  }, [localStream, cameraOff]);
+    
+    setCameraOff(nextCameraOff);
+    
+    // NEW: Emit the state change to the backend so others see our avatar
+    socket.emit("webrtc:camera-toggle", { 
+      roomId, 
+      isVideoOn: !nextCameraOff 
+    });
+  }, [localStream, cameraOff, socket, roomId]);
 
   return { 
     localStream, 
@@ -139,6 +160,7 @@ export function useWebRTC() {
     toggleMute, 
     cameraOff, 
     toggleCamera, 
-    micError 
+    micError,
+    remoteCameraStates // NEW: Export this so Sidebar can use it
   };
 }
