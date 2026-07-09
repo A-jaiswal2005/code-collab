@@ -1,13 +1,31 @@
 import React, { useEffect, useRef } from "react";
 
-export default function VideoTile({ username, isLocal, muted, stream }) {
+// ADDED: 'isVideoOn' prop (defaults to true) to handle the toggle accurately
+export default function VideoTile({ username, isLocal, muted, stream, isVideoOn = true }) {
   const videoRef = useRef(null);
 
+  // Determine if we should show the video element or the fallback
+  const showVideo = stream && isVideoOn;
+
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+    const videoElement = videoRef.current;
+
+    if (videoElement && showVideo) {
+      videoElement.srcObject = stream;
+      
+      // FIX 1: Explicitly call play() to bypass strict browser autoplay policies
+      videoElement.play().catch((error) => {
+        console.error("Video playback failed:", error);
+      });
     }
-  }, [stream]);
+
+    // FIX 2: Cleanup the srcObject to prevent frozen frames or memory leaks
+    return () => {
+      if (videoElement) {
+        videoElement.srcObject = null;
+      }
+    };
+  }, [stream, showVideo]);
 
   const initials = (username || "?")
     .split(" ")
@@ -18,17 +36,18 @@ export default function VideoTile({ username, isLocal, muted, stream }) {
 
   return (
     <div style={styles.tile}>
-      {/* THE NEW VIDEO PLAYER */}
       <div style={styles.videoContainer}>
-        {stream ? (
+        
+        {/* FIX 3: Use showVideo instead of just checking for stream */}
+        {showVideo ? (
           <video
             ref={videoRef}
             autoPlay
             playsInline
-            muted={isLocal} // MUST BE TRUE FOR LOCAL USER TO PREVENT ECHO
+            muted={isLocal} 
             style={{
               ...styles.video,
-              transform: isLocal ? "scaleX(-1)" : "none", // Mirrors local video
+              transform: isLocal ? "scaleX(-1)" : "none", 
             }}
           />
         ) : (
@@ -47,6 +66,7 @@ export default function VideoTile({ username, isLocal, muted, stream }) {
   );
 }
 
+// ... your styles object remains exactly the same
 const styles = {
   tile: {
     display: "flex",
@@ -60,7 +80,7 @@ const styles = {
   videoContainer: {
     position: "relative",
     width: "100%",
-    aspectRatio: "16/9", // Standard widescreen aspect ratio
+    aspectRatio: "16/9", 
     background: "#000",
     display: "flex",
     alignItems: "center",
@@ -69,7 +89,7 @@ const styles = {
   video: {
     width: "100%",
     height: "100%",
-    objectFit: "cover", // Ensures the video fills the box without stretching
+    objectFit: "cover", 
   },
   avatarFallback: {
     width: 60,
