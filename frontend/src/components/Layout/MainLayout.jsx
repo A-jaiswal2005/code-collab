@@ -63,7 +63,6 @@ export default function MainLayout() {
   return (
     <div style={styles.container}>
       <header style={styles.topbar}>
-        {/* The section that was missing its <div> tags! */}
         <div style={styles.brandGroup}>
           <div style={styles.brand}>code-collab</div>
           <div style={styles.roomBadge}>
@@ -89,7 +88,8 @@ export default function MainLayout() {
       </header>
 
       <div style={styles.body}>
-        <main style={{ ...styles.workspace, flex: view === "editor" ? 3 : 5 }}>
+        {/* Editor now gets flex: 4 (taking up much more space) */}
+        <main style={{ ...styles.workspace, flex: view === "editor" ? 4 : 5 }}>
           <div style={{ display: view === "editor" ? "block" : "none", height: "100%" }}>
             <CodeEditor 
               language={language} 
@@ -137,6 +137,9 @@ const styles = {
   toggleActive: { background: "var(--accent)", color: "#11111b", fontWeight: 600 },
   body: { display: "flex", flex: 1, minHeight: 0 },
   workspace: { minWidth: 0, borderRight: "1px solid var(--border-color)" },
-  terminalWrapper: { flex: 2, borderRight: "1px solid var(--border-color)", minWidth: 250 },
+  
+  // Terminal now gets a much smaller flex ratio
+  terminalWrapper: { flex: 1.2, borderRight: "1px solid var(--border-color)", minWidth: 280, maxWidth: 450 },
+  
   sidebarWrapper: { width: "260px", flexShrink: 0 },
 };
