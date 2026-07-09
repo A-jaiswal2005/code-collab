@@ -2,19 +2,17 @@ import React, { useEffect, useRef } from "react";
 
 export default function VideoTile({ username, isLocal, muted, stream, isVideoOn = true }) {
   const videoRef = useRef(null);
-  const audioRef = useRef(null); // NEW: Dedicated reference for audio
+  const audioRef = useRef(null); 
 
   const showVideo = stream && isVideoOn;
 
   useEffect(() => {
     if (stream) {
-      // 1. Attach stream to the Video element (Visuals only)
       if (videoRef.current && videoRef.current.srcObject !== stream) {
         videoRef.current.srcObject = stream;
         videoRef.current.play().catch(e => console.warn("Video autoplay prevented", e));
       }
       
-      // 2. Attach stream to the Audio element (Sound only)
       if (audioRef.current && audioRef.current.srcObject !== stream) {
         audioRef.current.srcObject = stream;
         audioRef.current.play().catch(e => console.warn("Audio autoplay prevented", e));
@@ -33,8 +31,6 @@ export default function VideoTile({ username, isLocal, muted, stream, isVideoOn 
     <div style={styles.tile}>
       <div style={styles.videoContainer}>
         
-        {/* NEW: Dedicated Audio tag. 
-            Only muted if this is the LOCAL user (to stop feedback loops). */}
         <audio 
           ref={audioRef} 
           autoPlay 
@@ -42,8 +38,6 @@ export default function VideoTile({ username, isLocal, muted, stream, isVideoOn 
           muted={isLocal} 
         />
 
-        {/* Video tag. 
-            Muted is ALWAYS true here because the <audio> tag handles the sound. */}
         <video
           ref={videoRef}
           autoPlay
@@ -73,4 +67,29 @@ export default function VideoTile({ username, isLocal, muted, stream, isVideoOn 
   );
 }
 
-// (Keep your existing styles object here)
+// FIXED: Added the styles object back!
+const styles = {
+  tile: { display: "flex", flexDirection: "column", gap: 8, background: "var(--bg-tertiary)", borderRadius: "var(--radius)", overflow: "hidden", border: "1px solid var(--border-color)" },
+  videoContainer: { position: "relative", width: "100%", aspectRatio: "16/9", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" },
+  video: { 
+    width: "100%", 
+    height: "100%", 
+    objectFit: "cover",
+    position: "absolute", 
+    top: 0,
+    left: 0
+  },
+  avatarFallbackWrapper: {
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1, 
+    background: "#000" 
+  },
+  avatarFallback: { width: 60, height: 60, borderRadius: "50%", background: "linear-gradient(135deg, var(--accent), #cba6f7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "#11111b" },
+  overlay: { position: "absolute", bottom: 8, left: 8, right: 8, display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 2 },
+  nameBadge: { background: "rgba(0,0,0,0.6)", padding: "2px 6px", borderRadius: 4, fontSize: 11, color: "white", textShadow: "0 1px 2px rgba(0,0,0,0.8)" },
+  mutedBadge: { background: "rgba(231, 76, 60, 0.8)", padding: "2px 4px", borderRadius: 4, fontSize: 10 }
+};
