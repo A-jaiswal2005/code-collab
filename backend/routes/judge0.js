@@ -8,13 +8,14 @@ const express = require("express");
 const router = express.Router();
 
 // 1. Map frontend language names to OnlineCompiler.io compiler IDs
+// 1. Map frontend language names to exact OnlineCompiler.io compiler IDs
 const compilerMap = {
-    'cpp': 'cpp-g++-15',
-    'c++': 'cpp-g++-15',
-    'c': 'c-gcc-15',
+    'cpp': 'g++-15',             
+    'c++': 'g++-15',             
+    'c': 'gcc-15',               
     'python': 'python-3.14',
     'python3': 'python-3.14',
-    'java': 'java-25',
+    'java': 'openjdk-25',        
     'javascript': 'typescript-deno', 
     'go': 'go-1.26',
     'rust': 'rust-1.93'
