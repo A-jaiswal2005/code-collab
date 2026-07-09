@@ -14,7 +14,7 @@ export default function Sidebar() {
     cameraOff, 
     toggleCamera, 
     micError,
-    remoteCameraStates // Grab the new state here
+    remoteCameraStates 
   } = useWebRTC();
 
   return (
@@ -24,10 +24,18 @@ export default function Sidebar() {
           <span>Participants ({users.length})</span>
           
           <div style={{ display: "flex", gap: "8px" }}>
-            <button style={styles.muteBtn} onClick={toggleCamera}>
+            <button 
+              style={styles.muteBtn} 
+              onClick={toggleCamera}
+              title={cameraOff ? "Turn Camera On" : "Turn Camera Off"}
+            >
               {cameraOff ? "📷 (Off)" : "📸"}
             </button>
-            <button style={styles.muteBtn} onClick={toggleMute}>
+            <button 
+              style={styles.muteBtn} 
+              onClick={toggleMute}
+              title={muted ? "Unmute" : "Mute"}
+            >
               {muted ? "🔇" : "🎙️"}
             </button>
           </div>
@@ -37,10 +45,8 @@ export default function Sidebar() {
           {users.map((u) => {
             const isLocal = u.socketId === socket?.id;
             
-            // Determine if the video should be shown based on local/remote logic
             const isVideoOn = isLocal 
               ? !cameraOff 
-              // If it's a remote user, check their state. Default to true if undefined.
               : (remoteCameraStates[u.socketId] ?? true);
             
             return (
@@ -50,7 +56,7 @@ export default function Sidebar() {
                 isLocal={isLocal}
                 muted={isLocal ? muted : false} 
                 stream={isLocal ? localStream : remoteStreams[u.socketId]}
-                isVideoOn={isVideoOn} // Pass the calculated boolean
+                isVideoOn={isVideoOn} 
               />
             );
           })}
@@ -66,4 +72,13 @@ export default function Sidebar() {
   );
 }
 
-// (Keep your existing styles object here)
+// FIXED: Added the styles object back!
+const styles = {
+  wrapper: { width: "100%", height: "100%", display: "flex", flexDirection: "column", gap: 14, padding: 14, background: "var(--bg-secondary)", borderLeft: "1px solid var(--border-color)", boxSizing: "border-box" },
+  section: { display: "flex", flexDirection: "column", gap: 8, flex: 1 },
+  sectionHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 },
+  muteBtn: { background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 8px", fontSize: 13, cursor: "pointer" },
+  tileList: { display: "flex", flexDirection: "column", gap: 8, overflowY: "auto" },
+  micWarning: { fontSize: 11, color: "var(--warning)" },
+  leaveBtn: { background: "transparent", border: "1px solid var(--danger)", color: "var(--danger)", padding: "8px", borderRadius: "var(--radius)", fontSize: 13, cursor: "pointer", marginTop: "auto" },
+};
