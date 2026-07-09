@@ -1,119 +1,106 @@
-# code-collab
+💻 Code-Collab
+A real-time, fully-featured collaborative coding environment built for teams, interviews, and hackathons. It features a shared Monaco code editor (powered by Yjs CRDTs), an infinite collaborative whiteboard (tldraw), robust peer-to-peer video/audio chat (WebRTC), and one-click code execution via a secure Online Compiler API proxy.
 
-A real-time collaborative coding platform: shared Monaco editor (Yjs CRDT sync),
-collaborative whiteboard (tldraw), peer-to-peer voice chat (WebRTC/simple-peer),
-and one-click code execution via Judge0.
+✨ Key Features
+Real-time Code Sync: Conflict-free collaborative typing using yjs, y-websocket, and y-monaco.
 
-## Architecture
+Video & Audio Chat: Peer-to-peer communication via WebRTC (simple-peer).
 
-```
+Includes dynamic camera toggling with fallback avatars.
+
+Layered audio/video architecture to prevent browser media throttling.
+
+Active Speaker Highlighting: Real-time microphone frequency analysis (Web Audio API) to visually highlight who is speaking.
+
+Live Whiteboard: Fully integrated tldraw canvas synchronized via Socket.io.
+
+Integrated Execution: Secure proxy execution for C++ and Python (and more) via an online compiler API.
+
+🏗 Architecture
+Plaintext
 ┌─────────────────────┐        ┌──────────────────────────────────┐
-│   React (Vite) SPA   │        │        Node.js backend            │
-│                      │        │                                    │
-│  MainLayout          │  REST  │  Express  --> /api/execute (Judge0)│
-│  ├─ CodeEditor        │◄──────►│                                    │
-│  │   (Monaco+y-monaco)│  ws    │  Socket.io --> /socket.io          │
-│  ├─ Whiteboard        │◄──────►│    - room presence                │
-│  │   (tldraw)         │        │    - WebRTC signaling              │
-│  └─ Sidebar            │  ws    │    - whiteboard broadcast          │
-│      ├─ VideoTiles     │◄──────►│                                    │
-│      ├─ Run Code btn   │        │  y-websocket --> /yjs/<roomId>     │
-│      └─ Terminal       │        │    - Yjs CRDT sync for the editor  │
+│   React (Vite) SPA  │        │        Node.js backend           │
+│                     │        │                                  │
+│  MainLayout         │  REST  │  Express  --> /api/execute       │
+│  ├─ CodeEditor      │◄──────►│               (Compiler API)     │
+│  │   (Monaco+yjs)   │  ws    │  Socket.io --> /socket.io        │
+│  ├─ Whiteboard      │◄──────►│    - room presence               │
+│  │   (tldraw)       │        │    - WebRTC signaling            │
+│  └─ Sidebar         │  ws    │    - UI state broadcast (cameras)│
+│      ├─ VideoTiles  │◄──────►│    - whiteboard broadcast        │
+│      ├─ Run Code btn│        │                                  │
+│      └─ Terminal    │        │  y-websocket --> /yjs/<roomId>   │
 └─────────────────────┘        └──────────────────────────────────┘
-```
+Code sync: The backend hosts a dedicated websocket endpoint at /yjs/<roomId> for Yjs CRDT synchronization.
 
-- **Code sync**: `yjs` + `y-websocket` + `y-monaco` give conflict-free
-  collaborative typing. The backend hosts the sync endpoint at `/yjs/<roomId>`.
-- **Whiteboard sync**: tldraw store diffs are broadcast over the existing
-  Socket.io connection (see `whiteboard:update`).
-- **Voice chat**: `simple-peer` (WebRTC) with Socket.io as the signaling
-  transport (`webrtc:signal`). Full-mesh topology - fine for small rooms.
-- **Code execution**: the backend proxies to the Judge0 API so your API key
-  never touches the browser (`POST /api/execute`).
+Whiteboard sync: tldraw store diffs are broadcast over the existing Socket.io connection (whiteboard:update).
 
-## Quick start (Docker)
+Media / WebRTC: Full-mesh topology. Socket.io handles the initial signaling (webrtc:signal), and also broadcasts UI state changes (like someone turning off their camera) so the React frontend can instantly render fallback avatars.
 
-1. Copy the backend env file and add your Judge0 API key:
-   ```bash
-   cp backend/.env.example backend/.env
-   # edit backend/.env and set JUDGE0_API_KEY (get one from RapidAPI's Judge0 CE)
-   ```
-2. Spin everything up:
-   ```bash
-   docker-compose up --build
-   ```
-3. Open the app: **http://localhost:5173**
-4. Backend health check: **http://localhost:4000/health**
+Code execution: The backend safely proxies requests to the online compiler API so your private API keys never leak to the browser client (POST /api/execute).
 
-> The `docker-compose.yml` reads `JUDGE0_API_URL` / `JUDGE0_API_KEY` /
-> `JUDGE0_API_HOST` from your shell environment or an `.env` file placed next
-> to `docker-compose.yml` (standard Docker Compose behavior).
+🚀 Quick Start (Docker)
+Copy the backend env file and add your compiler API credentials:
 
-## Local development (without Docker)
+Bash
+cp backend/.env.example backend/.env
+# Edit backend/.env and set your COMPILER_API_URL and API KEY
+Spin everything up using Docker Compose:
 
-**Backend**
-```bash
+Bash
+docker-compose up --build
+Open the app: http://localhost:5173
+
+Backend health check: http://localhost:4000/health
+
+🛠 Local Development (Without Docker)
+1. Backend
+
+Bash
 cd backend
-cp .env.example .env   # fill in JUDGE0_API_KEY
+cp .env.example .env   # Add your Compiler API credentials here
 npm install
-npm run dev             # nodemon, restarts on change
-```
+npm run dev            # Starts nodemon, restarts on file change
+2. Frontend
 
-**Frontend**
-```bash
+Bash
 cd frontend
 npm install
-npm run dev              # Vite dev server on :5173
-```
+npm run dev            # Starts Vite dev server on port :5173
+By default, the frontend expects the backend at http://localhost:4000 and the Yjs websocket at ws://localhost:4000/yjs. You can override these by creating a .env file in the frontend/ directory (using VITE_BACKEND_URL and VITE_YWEBSOCKET_URL).
 
-By default the frontend expects the backend at `http://localhost:4000` and the
-Yjs websocket at `ws://localhost:4000/yjs`. Override via a `.env` file in
-`frontend/` (`VITE_BACKEND_URL`, `VITE_YWEBSOCKET_URL`) if needed.
+⚙️ Online Compiler API Setup
+This scaffold is built to integrate with standard online compiler execution endpoints. To enable the "Run Code" functionality:
 
-## Judge0 setup
+Obtain your API credentials from your chosen provider.
 
-This scaffold defaults to the public RapidAPI-hosted Judge0 CE instance. You
-need a (free-tier) RapidAPI key:
+Put the credentials in your backend/.env file.
 
-1. Subscribe at https://rapidapi.com/judge0-official/api/judge0-ce
-2. Put the key in `backend/.env` as `JUDGE0_API_KEY`.
+Ensure backend/routes/compiler.js (or your equivalent route file) reads these environment variables to inject the required authentication headers before proxying the payload.
 
-Prefer self-hosting Judge0? Point `JUDGE0_API_URL` at your own instance and
-drop the RapidAPI headers logic in `backend/routes/judge0.js` (it only adds
-`X-RapidAPI-*` headers when `JUDGE0_API_KEY` is set).
+🗺 Roadmap & Future Improvements
+This project is highly functional but leaves room for production-level hardening. Things to refine:
 
-## What's left for the remaining ~20%
+Authentication & Room Privacy: Rooms currently rely on URL IDs. Add a password layer or JWT authentication for private sessions.
 
-This scaffold is intentionally complete-but-opinionated. Things you'll likely
-want to refine:
+Database Persistence: Yjs docs and whiteboard states live in memory. Wire up y-leveldb or a database (like PostgreSQL/MongoDB) if you need code to survive server restarts.
 
-- **Auth / room privacy** - rooms are just IDs right now; anyone with the code
-  can join. Add a password or auth layer if needed.
-- **Persistence** - Yjs docs and whiteboard state live in memory only (both
-  on the backend and in `y-websocket`'s default in-memory persistence).
-  Wire up `y-leveldb` / a database if you need docs to survive a restart.
-- **TURN server** - the WebRTC hook uses default STUN-only ICE config, which
-  works on most networks but will fail behind strict corporate NATs/firewalls.
-  Add a TURN server (e.g. coturn) for reliability.
-- **Whiteboard sync robustness** - the tldraw sync in `Whiteboard.jsx` is a
-  simple diff-broadcast; there's no reconciliation for a client that
-  reconnects mid-session (it won't get the current board until someone draws).
-  Consider caching the last full snapshot per room on the backend and sending
-  it to newly-joined clients.
-- **More Judge0 languages** - only C++/Python are wired into the UI dropdown;
-  the backend's `LANGUAGE_ID_MAP` already supports adding more.
-- **Production hardening** - rate limiting on `/api/execute`, input size caps,
-  and reconnect/backoff tuning for the socket layers.
+TURN Server Integration: The WebRTC hook currently relies on default STUN configuration. To guarantee video chat works behind strict corporate firewalls, add a TURN server (e.g., coturn).
 
-## Project structure
+Whiteboard Reconciliation: Implement snapshot caching on the backend so newly-joined clients instantly receive the current board state without waiting for a new stroke.
 
-```
+AI Analyzer: Implement LLM-based time/space complexity analysis directly inside the code editor toolbar.
+
+Production Rate Limiting: Add basic rate-limiting to /api/execute to prevent abuse.
+
+📂 Project Structure
+Plaintext
 code-collab/
 ├── docker-compose.yml
 ├── backend/
 │   ├── Dockerfile
-│   ├── server.js              # Express + Socket.io + Yjs ws + Judge0 proxy
-│   ├── routes/judge0.js
+│   ├── server.js              # Express + Socket.io + Yjs ws + API proxy
+│   ├── routes/compiler.js     # Compiler execution proxy route
 │   └── utils/roomManager.js
 └── frontend/
     ├── Dockerfile
@@ -121,12 +108,16 @@ code-collab/
     └── src/
         ├── App.jsx
         ├── context/RoomContext.jsx
-        ├── hooks/useYjs.js
-        ├── hooks/useWebRTC.js
+        ├── hooks/
+        │   ├── useYjs.js
+        │   ├── useWebRTC.js       # WebRTC signaling and media toggles
+        │   └── useAudioLevel.js   # Web Audio API for active speaker detection
         └── components/
             ├── Room/RoomJoin.jsx
             ├── Layout/MainLayout.jsx
             ├── Editor/CodeEditor.jsx
             ├── Whiteboard/Whiteboard.jsx
-            └── Sidebar/{Sidebar,VideoTile,Terminal}.jsx
-```
+            └── Sidebar/
+                ├── Sidebar.jsx
+                ├── VideoTile.jsx  # Complex media layering & UI state
+                └── Terminal.jsx
