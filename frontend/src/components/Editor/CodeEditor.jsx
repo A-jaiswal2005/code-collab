@@ -23,44 +23,30 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
   const monacoInstanceRef = useRef(null);
   const [editorReady, setEditorReady] = useState(false);
 
-  // Yjs shared text type
-  const getYText = useCallback(() => ydoc.getText("monaco"), [ydoc]);
+  // THE FIX: We dynamically name the Yjs text object based on the language!
+  // e.g., "monaco-cpp", "monaco-python". 
+  // This gives every language its own isolated, collaborative save slot.
+  const getYText = useCallback(() => ydoc.getText(`monaco-${language}`), [ydoc, language]);
 
   const handleEditorMount = (editor, monaco) => {
     monacoInstanceRef.current = monaco;
     editorRef.current = editor;
     setEditorReady(true);
-
-    const yText = getYText();
-    if (yText.length === 0) {
-      yText.insert(0, DEFAULT_SNIPPETS[language] || "");
-    }
   };
 
-  // Change default snippet when language changes
-  useEffect(() => {
-    if (!editorReady || !provider) return;
-
-    const yText = getYText();
-    const currentText = yText.toString();
-    
-    // Only swap the snippet if the editor is empty OR if it still exactly 
-    // matches one of the default snippets (prevents deleting user's actual code).
-    const isDefaultSnippet = Object.values(DEFAULT_SNIPPETS).includes(currentText);
-
-    if (currentText.trim() === "" || isDefaultSnippet) {
-      yText.delete(0, yText.length); // Clear current text
-      yText.insert(0, DEFAULT_SNIPPETS[language] || ""); // Inject new snippet
-    }
-  }, [language, editorReady, provider, getYText]);
-
-  // (Re)bind Monaco <-> Yjs
+  // Bind Monaco <-> Yjs, and auto-update whenever the language changes
   useEffect(() => {
     if (!editorReady || !provider || !monacoInstanceRef.current) return undefined;
 
     const editor = editorRef.current;
     const yText = getYText();
 
+    // If this specific language's buffer is empty, seed it with the default snippet
+    if (yText.length === 0) {
+      yText.insert(0, DEFAULT_SNIPPETS[language] || "");
+    }
+
+    // Bind the editor to the new language's shared text
     bindingRef.current = new MonacoBinding(
       yText,
       editor.getModel(),
@@ -69,10 +55,13 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
     );
 
     return () => {
+      // When switching languages, destroy the old binding...
       bindingRef.current?.destroy();
       bindingRef.current = null;
+      // ...and clear the visual editor so the new language code can load cleanly
+      editor.setValue(""); 
     };
-  }, [editorReady, provider, getYText, editorRef]);
+  }, [editorReady, provider, getYText, editorRef, language]);
 
   return (
     <div 
