@@ -83,7 +83,13 @@ io.on("connection", (socket) => {
   socket.on("webrtc:signal", ({ to, from, signal }) => {
     io.to(to).emit("webrtc:signal", { from, signal });
   });
-
+  // ---- NEW: Camera Toggle UI State -------------------------------
+  socket.on("webrtc:camera-toggle", ({ roomId, isVideoOn }) => {
+    socket.to(roomId).emit("room:peer-camera-changed", {
+      socketId: socket.id,
+      isVideoOn: isVideoOn
+    });
+  });
   // ---- Whiteboard sync -------------------------------------------
   socket.on("whiteboard:update", ({ roomId, snapshot }) => {
     socket.to(roomId).emit("whiteboard:update", snapshot);
