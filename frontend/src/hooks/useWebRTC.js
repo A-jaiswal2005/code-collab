@@ -4,22 +4,22 @@ import { useRoom } from "../context/RoomContext.jsx";
 
 export function useWebRTC() {
   const { socket, roomId, users } = useRoom();
+  
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState({}); 
   
+  // Media states
   const [muted, setMuted] = useState(false);
-  const [micError, setMicError] = useState(null);
-  
-  // NEW: State to track if the camera is off
   const [cameraOff, setCameraOff] = useState(false);
+  const [micError, setMicError] = useState(null);
 
   const peersRef = useRef({}); 
 
-  // ---- Acquire microphone & camera ---------------------------------
+  // ---- 1. Acquire Media ---------------------------------
   useEffect(() => {
     let stream;
     navigator.mediaDevices
-      ?.getUserMedia({ audio: true, video: true }) // You were already requesting video here, which is great!
+      .getUserMedia({ audio: true, video: true })
       .then((s) => {
         stream = s;
         setLocalStream(s);
@@ -34,35 +34,33 @@ export function useWebRTC() {
     };
   }, []);
 
-  const createPeer = useCallback(
-    (remoteSocketId, initiator) => {
-      if (!localStream) return null;
+  // ---- 2. Peer Connection Logic -------------------------
+  const createPeer = useCallback((remoteSocketId, initiator) => {
+    if (!localStream) return null;
 
-      const peer = new SimplePeer({
-        initiator,
-        trickle: true,
-        stream: localStream,
-      });
+    const peer = new SimplePeer({
+      initiator,
+      trickle: true,
+      stream: localStream, // Passes both audio and video automatically
+    });
 
-      peer.on("signal", (signal) => {
-        socket.emit("webrtc:signal", { to: remoteSocketId, from: socket.id, signal });
-      });
+    peer.on("signal", (signal) => {
+      socket.emit("webrtc:signal", { to: remoteSocketId, from: socket.id, signal });
+    });
 
-      peer.on("stream", (remoteStream) => {
-        setRemoteStreams((prev) => ({ ...prev, [remoteSocketId]: remoteStream }));
-      });
+    peer.on("stream", (remoteStream) => {
+      setRemoteStreams((prev) => ({ ...prev, [remoteSocketId]: remoteStream }));
+    });
 
-      peer.on("close", () => cleanupPeer(remoteSocketId));
-      peer.on("error", (err) => {
-        console.warn(`Peer ${remoteSocketId} error:`, err.message);
-        cleanupPeer(remoteSocketId);
-      });
+    peer.on("close", () => cleanupPeer(remoteSocketId));
+    peer.on("error", (err) => {
+      console.warn(`Peer ${remoteSocketId} error:`, err.message);
+      cleanupPeer(remoteSocketId);
+    });
 
-      peersRef.current[remoteSocketId] = peer;
-      return peer;
-    },
-    [localStream, socket]
-  );
+    peersRef.current[remoteSocketId] = peer;
+    return peer;
+  }, [localStream, socket]);
 
   const cleanupPeer = (socketId) => {
     peersRef.current[socketId]?.destroy();
@@ -74,7 +72,7 @@ export function useWebRTC() {
     });
   };
 
-  // ---- Signaling event wiring -------------------------------------
+  // ---- 3. Socket Signaling ------------------------------
   useEffect(() => {
     if (!socket || !localStream) return undefined;
 
@@ -85,9 +83,7 @@ export function useWebRTC() {
 
     const onSignal = ({ from, signal }) => {
       let peer = peersRef.current[from];
-      if (!peer) {
-        peer = createPeer(from, false);
-      }
+      if (!peer) peer = createPeer(from, false);
       peer?.signal(signal);
     };
 
@@ -114,29 +110,28 @@ export function useWebRTC() {
   }, [users, localStream]);
 
   useEffect(() => {
-    return () => {
-      Object.keys(peersRef.current).forEach(cleanupPeer);
-    };
+    return () => Object.keys(peersRef.current).forEach(cleanupPeer);
   }, [roomId]);
 
-  // ---- Toggles ---------------------------------------------------
+  // ---- 4. Media Toggles ---------------------------------
   const toggleMute = useCallback(() => {
     if (!localStream) return;
-    const nextMuted = !muted;
-    localStream.getAudioTracks().forEach((track) => (track.enabled = !nextMuted));
-    setMuted(nextMuted);
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = muted; // if muted is true, enable it (turn on)
+      setMuted(!muted);
+    }
   }, [localStream, muted]);
 
-  // NEW: Toggle function for the camera
   const toggleCamera = useCallback(() => {
     if (!localStream) return;
-    const nextCameraOff = !cameraOff;
-    // Get all video tracks and enable/disable them
-    localStream.getVideoTracks().forEach((track) => (track.enabled = !nextCameraOff));
-    setCameraOff(nextCameraOff);
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = cameraOff; // if cameraOff is true, enable it (turn on)
+      setCameraOff(!cameraOff);
+    }
   }, [localStream, cameraOff]);
 
-  // NEW: Make sure to export cameraOff and toggleCamera at the bottom!
   return { 
     localStream, 
     remoteStreams, 
