@@ -17,24 +17,33 @@ export default function VideoTile({ username, isLocal, muted, stream }) {
     .toUpperCase();
 
   return (
-    
+    <div style={styles.tile}>
       {/* THE NEW VIDEO PLAYER */}
-      
+      <div style={styles.videoContainer}>
         {stream ? (
-          
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted={isLocal} // MUST BE TRUE FOR LOCAL USER TO PREVENT ECHO
+            style={{
+              ...styles.video,
+              transform: isLocal ? "scaleX(-1)" : "none", // Mirrors local video
+            }}
+          />
         ) : (
-          {initials}
+          <div style={styles.avatarFallback}>{initials}</div>
         )}
         
         {/* OVERLAY TAGS */}
-        
-          
+        <div style={styles.overlay}>
+          <span style={styles.nameBadge}>
             {username} {isLocal && "(you)"}
-          
-          {muted && 🔇}
-        
-      
-    
+          </span>
+          {muted && <span style={styles.mutedBadge}>🔇</span>}
+        </div>
+      </div>
+    </div>
   );
 }
 
