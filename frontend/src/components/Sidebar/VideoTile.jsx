@@ -1,10 +1,15 @@
 import React, { useEffect, useRef } from "react";
+// NEW: Import the audio hook (adjust the path to match your folder structure!)
+import { useAudioLevel } from "../../hooks/useAudioLevel.js"; 
 
 export default function VideoTile({ username, isLocal, muted, stream, isVideoOn = true }) {
   const videoRef = useRef(null);
   const audioRef = useRef(null); 
 
   const showVideo = stream && isVideoOn;
+  
+  // NEW: Get the speaking status
+  const isSpeaking = useAudioLevel(stream);
 
   useEffect(() => {
     if (stream) {
@@ -27,8 +32,17 @@ export default function VideoTile({ username, isLocal, muted, stream, isVideoOn 
     .join("")
     .toUpperCase();
 
+  // NEW: Determine if we should show the glow (only if speaking and NOT muted)
+  const showSpeakingGlow = isSpeaking && !muted;
+
   return (
-    <div style={styles.tile}>
+    <div style={{
+      ...styles.tile,
+      // NEW: The dynamic CSS for the highlighted border!
+      boxShadow: showSpeakingGlow ? "0 0 0 3px #4ade80" : "0 0 0 0px transparent",
+      borderColor: showSpeakingGlow ? "#4ade80" : "var(--border-color)",
+      transition: "box-shadow 0.2s ease, border-color 0.2s ease" // Smooth fade in/out
+    }}>
       <div style={styles.videoContainer}>
         
         <audio 
@@ -67,7 +81,6 @@ export default function VideoTile({ username, isLocal, muted, stream, isVideoOn 
   );
 }
 
-// FIXED: Added the styles object back!
 const styles = {
   tile: { display: "flex", flexDirection: "column", gap: 8, background: "var(--bg-tertiary)", borderRadius: "var(--radius)", overflow: "hidden", border: "1px solid var(--border-color)" },
   videoContainer: { position: "relative", width: "100%", aspectRatio: "16/9", background: "#000", display: "flex", alignItems: "center", justifyContent: "center" },
