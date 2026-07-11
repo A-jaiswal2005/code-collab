@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from "uuid";
 import { useRoom } from "../../context/RoomContext.jsx";
 
 export default function RoomJoin() {
-  // Assuming you update useRoom to expose createRoom as well
   const { joinRoom, createRoom } = useRoom(); 
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
@@ -15,7 +14,6 @@ export default function RoomJoin() {
     
     const newRoomId = uuidv4().slice(0, 8);
     
-    // Assuming createRoom accepts a callback to handle the response
     createRoom(newRoomId, name.trim(), (response) => {
       if (!response.success) setError(response.error);
     });
@@ -26,13 +24,51 @@ export default function RoomJoin() {
     if (!roomCode.trim()) return setError("Enter a room code to join.");
     setError(""); 
     
-    // Pass a callback to catch the "Invalid Room ID" error from the server
     joinRoom(roomCode.trim(), name.trim(), (response) => {
       if (!response.success) {
         setError(response.error);
       }
     });
   };
+
+  return (
+    <div style={styles.wrapper}>
+      <div style={styles.card}>
+        <h1 style={styles.title}>code-collab</h1>
+        <p style={styles.subtitle}>Real-time collaborative coding, whiteboarding &amp; voice chat.</p>
+
+        <input
+          style={styles.input}
+          placeholder="Your display name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <button style={styles.primaryBtn} onClick={handleCreate}>
+          + Create a New Room
+        </button>
+
+        <div style={styles.divider}>
+          <span>or join an existing room</span>
+        </div>
+
+        <div style={styles.joinRow}>
+          <input
+            style={{ ...styles.input, marginBottom: 0 }}
+            placeholder="Room code"
+            value={roomCode}
+            onChange={(e) => setRoomCode(e.target.value)}
+          />
+          <button style={styles.secondaryBtn} onClick={handleJoin}>
+            Join
+          </button>
+        </div>
+
+        {error && <p style={styles.error}>{error}</p>}
+      </div>
+    </div>
+  );
+}
 
 const styles = {
   wrapper: {
