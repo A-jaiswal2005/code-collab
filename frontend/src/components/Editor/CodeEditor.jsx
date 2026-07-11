@@ -23,9 +23,7 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
   const monacoInstanceRef = useRef(null);
   const [editorReady, setEditorReady] = useState(false);
 
-  // THE FIX: We dynamically name the Yjs text object based on the language!
-  // e.g., "monaco-cpp", "monaco-python". 
-  // This gives every language its own isolated, collaborative save slot.
+  // We dynamically name the Yjs text object based on the language!
   const getYText = useCallback(() => ydoc.getText(`monaco-${language}`), [ydoc, language]);
 
   const handleEditorMount = (editor, monaco) => {
@@ -41,9 +39,20 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
     const editor = editorRef.current;
     const yText = getYText();
 
-    // If this specific language's buffer is empty, seed it with the default snippet
-    if (yText.length === 0) {
-      yText.insert(0, DEFAULT_SNIPPETS[language] || "");
+    // THE FIX: Only inject snippets AFTER the provider has finished syncing with the room
+    const handleSync = (isSynced) => {
+      // If we are fully synced and the document is STILL empty, it's a fresh room/language.
+      if (isSynced && yText.length === 0) {
+        yText.insert(0, DEFAULT_SNIPPETS[language] || "");
+      }
+    };
+
+    // If already synced (e.g., when switching languages mid-session), run immediately
+    if (provider.synced) {
+      handleSync(true);
+    } else {
+      // Otherwise, wait for the initial connection to finish syncing
+      provider.on("synced", handleSync);
     }
 
     // Bind the editor to the new language's shared text
@@ -55,6 +64,9 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
     );
 
     return () => {
+      // Clean up the event listener to prevent memory leaks
+      provider.off("synced", handleSync);
+      
       // When switching languages, destroy the old binding...
       bindingRef.current?.destroy();
       bindingRef.current = null;
