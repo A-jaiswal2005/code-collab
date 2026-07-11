@@ -6,15 +6,9 @@ import { useRoom } from "../../context/RoomContext.jsx";
 /**
  * Whiteboard
  * ---------------------------------------------------------------
- * A lightweight collaborative layer on top of tldraw. Rather than
- * pulling in tldraw's (paid) sync backend, we broadcast local
- * store diffs over the existing Socket.io connection and apply
- * remote diffs with `mergeRemoteChanges` so they don't re-trigger
- * our own listener (avoiding echo loops).
- *
- * NOTE: this is a "good enough for most use-cases" sync strategy.
- * For very high-frequency drawing with many simultaneous users,
- * consider tldraw's official sync server instead.
+ * A lightweight collaborative layer on top of tldraw. Includes
+ * an auto-sync feature where the server requests the room's admin
+ * to send the initial board state directly to new joiners.
  * ---------------------------------------------------------------
  */
 export default function Whiteboard() {
@@ -22,24 +16,18 @@ export default function Whiteboard() {
   const editorRef = useRef(null);
   const applyingRemote = useRef(false);
 
-  // --- NEW FIX: Prevent Tldraw from swallowing Monaco keystrokes ---
+  // Prevent Tldraw from swallowing Monaco keystrokes
   useEffect(() => {
     const blockTldrawShortcuts = (e) => {
       const target = e.target;
-      
-      // Check if the user is focused on a standard input or Monaco's hidden textarea
       const isStandardInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
       const isMonaco = target.classList?.contains('inputarea');
 
       if (isStandardInput || isMonaco) {
-        // stopImmediatePropagation prevents ANY other listeners (like Tldraw's) 
-        // on the window from firing for this specific keystroke.
         e.stopImmediatePropagation();
       }
     };
 
-    // We MUST use the capture phase (the third argument set to `true`) 
-    // to catch the event BEFORE it bubbles down to Tldraw's internal listeners.
     window.addEventListener('keydown', blockTldrawShortcuts, true);
     window.addEventListener('keyup', blockTldrawShortcuts, true);
 
@@ -48,7 +36,6 @@ export default function Whiteboard() {
       window.removeEventListener('keyup', blockTldrawShortcuts, true);
     };
   }, []);
-  // -----------------------------------------------------------------
 
   const handleMount = useCallback(
     (editor) => {
@@ -57,7 +44,7 @@ export default function Whiteboard() {
       // Broadcast local changes to peers.
       const unlisten = editor.store.listen(
         (entry) => {
-          if (applyingRemote.current) return; // don't echo remote-applied changes
+          if (applyingRemote.current) return;
           socket?.emit("whiteboard:update", { roomId, snapshot: entry.changes });
         },
         { source: "user", scope: "document" }
@@ -71,6 +58,7 @@ export default function Whiteboard() {
   useEffect(() => {
     if (!socket) return undefined;
 
+    // 1. LIVE DRAWING (Everyone)
     const handleRemoteUpdate = (changes) => {
       const editor = editorRef.current;
       if (!editor) return;
@@ -85,8 +73,38 @@ export default function Whiteboard() {
       applyingRemote.current = false;
     };
 
+    // 2. THE ADMIN: Hears the server ask for a snapshot for a new user
+    const handlePleaseSendSync = (requesterSocketId) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      
+      const currentSnapshot = editor.store.getSnapshot();
+      
+      socket.emit("whiteboard:send-sync", {
+        toSocketId: requesterSocketId,
+        snapshot: currentSnapshot
+      });
+    };
+
+    // 3. THE JOINER: Receives the full snapshot from the Admin
+    const handleInitialSync = (snapshot) => {
+      const editor = editorRef.current;
+      if (!editor || !snapshot) return;
+
+      applyingRemote.current = true;
+      editor.store.loadSnapshot(snapshot);
+      applyingRemote.current = false;
+    };
+
     socket.on("whiteboard:update", handleRemoteUpdate);
-    return () => socket.off("whiteboard:update", handleRemoteUpdate);
+    socket.on("whiteboard:please-send-sync", handlePleaseSendSync);
+    socket.on("whiteboard:initial-sync", handleInitialSync);
+
+    return () => {
+      socket.off("whiteboard:update", handleRemoteUpdate);
+      socket.off("whiteboard:please-send-sync", handlePleaseSendSync);
+      socket.off("whiteboard:initial-sync", handleInitialSync);
+    };
   }, [socket]);
 
   return (
