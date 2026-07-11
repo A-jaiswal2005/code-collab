@@ -12,8 +12,6 @@ export function RoomProvider({ children }) {
   const [username, setUsername] = useState(null);
   const [users, setUsers] = useState([]); // [{ socketId, username }]
 
-  // Create the socket once on mount. autoConnect:false lets us defer
-  // the actual connection until the user joins/creates a room.
   useEffect(() => {
     const socket = io(BACKEND_URL, {
       path: "/socket.io",
@@ -31,15 +29,42 @@ export function RoomProvider({ children }) {
     };
   }, []);
 
-  const joinRoom = useCallback((id, name) => {
+  // NEW: Dedicated createRoom method for admins
+  const createRoom = useCallback((id, name, callback) => {
     const socket = socketRef.current;
     if (!socket.connected) socket.connect();
 
-    setRoomId(id);
-    setUsername(name);
+    const doCreate = () => {
+      socket.emit("room:create", { roomId: id, username: name }, (response) => {
+        if (response && response.success) {
+          // Only update local state if the server successfully created it
+          setRoomId(id);
+          setUsername(name);
+        }
+        if (callback) callback(response);
+      });
+    };
 
-    // Wait for the transport to be ready before emitting join.
-    const doJoin = () => socket.emit("room:join", { roomId: id, username: name });
+    if (socket.connected) doCreate();
+    else socket.once("connect", doCreate);
+  }, []);
+
+  // UPDATED: joinRoom method with server validation
+  const joinRoom = useCallback((id, name, callback) => {
+    const socket = socketRef.current;
+    if (!socket.connected) socket.connect();
+
+    const doJoin = () => {
+      socket.emit("room:join", { roomId: id, username: name }, (response) => {
+        if (response && response.success) {
+          // Only update local state if the server allows entry
+          setRoomId(id);
+          setUsername(name);
+        }
+        if (callback) callback(response);
+      });
+    };
+
     if (socket.connected) doJoin();
     else socket.once("connect", doJoin);
   }, []);
@@ -57,6 +82,7 @@ export function RoomProvider({ children }) {
     roomId,
     username,
     users,
+    createRoom, // Exported to use in RoomJoin.jsx
     joinRoom,
     leaveRoom,
   };
