@@ -5,10 +5,8 @@
  * HTTP server, each on its own path so they don't collide:
  *
  *   1. Express REST API        -> /api/execute   (Judge0 proxy)
- *   2. Socket.io               -> /socket.io/*   (room presence +
- *                                                   WebRTC signaling)
- *   3. Raw WebSocket (y-websocket) -> /yjs/*       (Yjs CRDT sync for
- *                                                   the Monaco editor)
+ *   2. Socket.io               -> /socket.io/*   (room presence + WebRTC signaling)
+ *   3. Raw WebSocket           -> /yjs/*         (Yjs CRDT sync)
  * ---------------------------------------------------------------
  */
 require("dotenv").config();
@@ -25,12 +23,7 @@ const roomManager = require("./utils/roomManager");
 
 const PORT = process.env.PORT || 4000;
 
-// -----------------------------------------------------------------
-// Express app + REST routes
-// -----------------------------------------------------------------
 const app = express();
-
-// Open CORS for public client applications (Vercel, GitHub Pages, etc.)
 app.use(cors({ origin: "*", credentials: false }));
 app.use(express.json({ limit: "2mb" })); 
 
@@ -39,9 +32,6 @@ app.use("/api", judge0Router);
 
 const httpServer = http.createServer(app);
 
-// -----------------------------------------------------------------
-// Socket.io: room presence + WebRTC signaling
-// -----------------------------------------------------------------
 const io = new Server(httpServer, {
   cors: { origin: "*", methods: ["GET", "POST"] },
   path: "/socket.io", 
@@ -53,18 +43,48 @@ io.on("connection", (socket) => {
   let currentRoom = null;
   let currentUsername = null;
 
-  // ---- Room join/leave -----------------------------------------
-  socket.on("room:join", ({ roomId, username }) => {
-    currentRoom = roomId;
+  // ---- Room CREATE (Admin Only) --------------------------------
+  socket.on("room:create", ({ roomId, username }, callback) => {
     currentUsername = username || `Guest-${socket.id.slice(0, 4)}`;
+    
+    // Call createRoom from your updated roomManager
+    const result = roomManager.createRoom(roomId, socket.id, currentUsername);
+    
+    if (result.error) {
+      if (typeof callback === "function") callback({ success: false, error: result.error });
+      return;
+    }
 
+    currentRoom = roomId;
     socket.join(roomId);
-    const users = roomManager.joinRoom(roomId, socket.id, currentUsername);
-
-    socket.to(roomId).emit("room:peer-joined", { socketId: socket.id, username: currentUsername });
-    io.to(roomId).emit("room:users", users);
+    
+    if (typeof callback === "function") callback({ success: true });
+    io.to(roomId).emit("room:users", result.users);
   });
 
+  // ---- Room JOIN (Strict Gatekeeper) ---------------------------
+  socket.on("room:join", ({ roomId, username }, callback) => {
+    currentUsername = username || `Guest-${socket.id.slice(0, 4)}`;
+    
+    // Call joinRoom from your updated roomManager
+    const result = roomManager.joinRoom(roomId, socket.id, currentUsername);
+
+    if (result.error) {
+      // Reject entry, send error back to frontend
+      if (typeof callback === "function") callback({ success: false, error: result.error });
+      return;
+    }
+
+    currentRoom = roomId;
+    socket.join(roomId);
+    
+    if (typeof callback === "function") callback({ success: true });
+
+    socket.to(roomId).emit("room:peer-joined", { socketId: socket.id, username: currentUsername });
+    io.to(roomId).emit("room:users", result.users);
+  });
+
+  // ---- Room leave ----------------------------------------------
   socket.on("room:leave", () => {
     if (!currentRoom) return;
     roomManager.leaveRoom(currentRoom, socket.id);
@@ -74,27 +94,27 @@ io.on("connection", (socket) => {
     currentRoom = null;
   });
 
-  // ---- Code execution broadcast ---------------------------------
+  // ---- Broadcasts & Signaling ----------------------------------
   socket.on("terminal:broadcast", ({ roomId, result }) => {
     socket.to(roomId).emit("terminal:result", result);
   });
 
-  // ---- WebRTC signaling ------------------------------------------
   socket.on("webrtc:signal", ({ to, from, signal }) => {
     io.to(to).emit("webrtc:signal", { from, signal });
   });
-  // ---- NEW: Camera Toggle UI State -------------------------------
+
   socket.on("webrtc:camera-toggle", ({ roomId, isVideoOn }) => {
     socket.to(roomId).emit("room:peer-camera-changed", {
       socketId: socket.id,
       isVideoOn: isVideoOn
     });
   });
-  // ---- Whiteboard sync -------------------------------------------
+
   socket.on("whiteboard:update", ({ roomId, snapshot }) => {
     socket.to(roomId).emit("whiteboard:update", snapshot);
   });
 
+  // ---- Disconnect ----------------------------------------------
   socket.on("disconnect", () => {
     console.log(`[socket.io] client disconnected: ${socket.id}`);
     if (currentRoom) {
@@ -106,18 +126,13 @@ io.on("connection", (socket) => {
   });
 });
 
-// -----------------------------------------------------------------
-// Yjs WebSocket server, mounted at /yjs
-// -----------------------------------------------------------------
 const yjsWss = new WebSocketServer({ noServer: true });
 
 yjsWss.on("connection", (conn, req) => {
   setupWSConnection(conn, req);
 });
 
-// Manually route "upgrade" requests
 httpServer.on("upgrade", (req, socket, head) => {
-  // FIXED: Safer URL route detection that avoids parsing errors from proxy routing headers
   if (req.url && req.url.startsWith("/yjs")) {
     yjsWss.handleUpgrade(req, socket, head, (ws) => {
       yjsWss.emit("connection", ws, req);
@@ -125,7 +140,6 @@ httpServer.on("upgrade", (req, socket, head) => {
   }
 });
 
-// Listening configuration optimized for Render container environment
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`Production server running securely on port ${PORT}`);
 });
