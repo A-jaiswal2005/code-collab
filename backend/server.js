@@ -47,7 +47,6 @@ io.on("connection", (socket) => {
   socket.on("room:create", ({ roomId, username }, callback) => {
     currentUsername = username || `Guest-${socket.id.slice(0, 4)}`;
     
-    // Call createRoom from your updated roomManager
     const result = roomManager.createRoom(roomId, socket.id, currentUsername);
     
     if (result.error) {
@@ -66,11 +65,9 @@ io.on("connection", (socket) => {
   socket.on("room:join", ({ roomId, username }, callback) => {
     currentUsername = username || `Guest-${socket.id.slice(0, 4)}`;
     
-    // Call joinRoom from your updated roomManager
     const result = roomManager.joinRoom(roomId, socket.id, currentUsername);
 
     if (result.error) {
-      // Reject entry, send error back to frontend
       if (typeof callback === "function") callback({ success: false, error: result.error });
       return;
     }
@@ -82,6 +79,12 @@ io.on("connection", (socket) => {
 
     socket.to(roomId).emit("room:peer-joined", { socketId: socket.id, username: currentUsername });
     io.to(roomId).emit("room:users", result.users);
+
+    // Auto-Sync Whiteboard: Ask the admin for the current state
+    const adminId = roomManager.getAdmin(roomId);
+    if (adminId && adminId !== socket.id) {
+      io.to(adminId).emit("whiteboard:please-send-sync", socket.id);
+    }
   });
 
   // ---- Room leave ----------------------------------------------
@@ -110,8 +113,13 @@ io.on("connection", (socket) => {
     });
   });
 
+  // ---- Whiteboard Sync Logic -----------------------------------
   socket.on("whiteboard:update", ({ roomId, snapshot }) => {
     socket.to(roomId).emit("whiteboard:update", snapshot);
+  });
+
+  socket.on("whiteboard:send-sync", ({ toSocketId, snapshot }) => {
+    io.to(toSocketId).emit("whiteboard:initial-sync", snapshot);
   });
 
   // ---- Disconnect ----------------------------------------------
