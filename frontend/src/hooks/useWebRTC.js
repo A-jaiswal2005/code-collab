@@ -2,6 +2,27 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import SimplePeer from "simple-peer";
 import { useRoom } from "../context/RoomContext.jsx";
 
+// ---- Media Fallback Utility ----
+// Cascades through permissions so one denial doesn't crash the connection
+async function getMediaWithFallback() {
+  try {
+    return await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+  } catch (err1) {
+    console.warn("Camera+Mic failed, trying video only...", err1.message);
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+    } catch (err2) {
+      console.warn("Video failed, trying mic only...", err2.message);
+      try {
+        return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      } catch (err3) {
+        console.warn("All media failed. Joining as receive-only viewer.", err3.message);
+        return null; // Signals viewer mode
+      }
+    }
+  }
+}
+
 export function useWebRTC() {
   const { socket, roomId, users } = useRoom();
   
@@ -11,25 +32,28 @@ export function useWebRTC() {
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
   const [micError, setMicError] = useState(null);
+  const [mediaReady, setMediaReady] = useState(false); // Tracks when fallback finishes
 
-  // NEW: State to track remote users' camera status (socketId -> boolean)
+  // State to track remote users' camera status (socketId -> boolean)
   const [remoteCameraStates, setRemoteCameraStates] = useState({});
 
   const peersRef = useRef({}); 
 
   // ---- 1. Acquire Media ----
   useEffect(() => {
-    let stream;
-    navigator.mediaDevices
-      .getUserMedia({ audio: true, video: true })
-      .then((s) => {
-        stream = s;
-        setLocalStream(s);
-      })
-      .catch((err) => {
-        console.warn("Media access denied/unavailable:", err.message);
-        setMicError(err.message);
-      });
+    let stream = null;
+    
+    getMediaWithFallback().then((s) => {
+      stream = s;
+      setLocalStream(s);
+      setMediaReady(true); // Unlocks the signaling step
+      
+      if (!s) {
+        setMicError("No camera/mic access. You joined as a viewer.");
+        setCameraOff(true);
+        setMuted(true);
+      }
+    });
 
     return () => {
       stream?.getTracks().forEach((t) => t.stop());
@@ -38,12 +62,13 @@ export function useWebRTC() {
 
   // ---- 2. Peer Connection Logic ----
   const createPeer = useCallback((remoteSocketId, initiator) => {
-    if (!localStream) return null;
+    // THE FIX: We no longer return null if localStream is missing. 
+    // We allow connection creation for receive-only viewers.
 
     const peer = new SimplePeer({
       initiator,
       trickle: true,
-      stream: localStream, 
+      ...(localStream ? { stream: localStream } : {}), // Only attach if it exists
     });
 
     peer.on("signal", (signal) => {
@@ -69,7 +94,6 @@ export function useWebRTC() {
       delete next[socketId];
       return next;
     });
-    // Cleanup their camera state when they leave
     setRemoteCameraStates((prev) => {
       const next = { ...prev };
       delete next[socketId];
@@ -79,7 +103,8 @@ export function useWebRTC() {
 
   // ---- 3. Socket Signaling ----
   useEffect(() => {
-    if (!socket || !localStream) return undefined;
+    // THE FIX: Wait for mediaReady instead of localStream
+    if (!socket || !mediaReady) return undefined;
 
     const onPeerJoined = ({ socketId }) => {
       if (peersRef.current[socketId]) return;
@@ -94,7 +119,6 @@ export function useWebRTC() {
 
     const onPeerLeft = ({ socketId }) => cleanupPeer(socketId);
 
-    // NEW: Listen for remote camera toggles
     const onPeerCameraChanged = ({ socketId, isVideoOn }) => {
       setRemoteCameraStates((prev) => ({ ...prev, [socketId]: isVideoOn }));
     };
@@ -102,7 +126,7 @@ export function useWebRTC() {
     socket.on("room:peer-joined", onPeerJoined);
     socket.on("webrtc:signal", onSignal);
     socket.on("room:peer-left", onPeerLeft);
-    socket.on("room:peer-camera-changed", onPeerCameraChanged); // Bind new event
+    socket.on("room:peer-camera-changed", onPeerCameraChanged);
 
     return () => {
       socket.off("room:peer-joined", onPeerJoined);
@@ -110,16 +134,18 @@ export function useWebRTC() {
       socket.off("room:peer-left", onPeerLeft);
       socket.off("room:peer-camera-changed", onPeerCameraChanged);
     };
-  }, [socket, localStream, createPeer]);
+  }, [socket, mediaReady, createPeer]);
 
   useEffect(() => {
-    if (!localStream || !socket) return;
+    // THE FIX: Wait for mediaReady instead of localStream
+    if (!mediaReady || !socket) return;
+    
     users.forEach((u) => {
       if (u.socketId !== socket.id && !peersRef.current[u.socketId]) {
         createPeer(u.socketId, true);
       }
     });
-  }, [users, localStream]);
+  }, [users, mediaReady, socket, createPeer]);
 
   useEffect(() => {
     return () => Object.keys(peersRef.current).forEach(cleanupPeer);
@@ -141,12 +167,11 @@ export function useWebRTC() {
     const nextCameraOff = !cameraOff;
     
     if (videoTrack) {
-      videoTrack.enabled = cameraOff; // Enable if it was off
+      videoTrack.enabled = cameraOff; 
     }
     
     setCameraOff(nextCameraOff);
     
-    // NEW: Emit the state change to the backend so others see our avatar
     socket.emit("webrtc:camera-toggle", { 
       roomId, 
       isVideoOn: !nextCameraOff 
@@ -161,6 +186,6 @@ export function useWebRTC() {
     cameraOff, 
     toggleCamera, 
     micError,
-    remoteCameraStates // NEW: Export this so Sidebar can use it
+    remoteCameraStates
   };
 }
