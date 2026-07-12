@@ -246,15 +246,19 @@ export default function VideoArea() {
   // instead of letting LiveKit throw an uncaught exception on mount.
   const handleMediaDeviceFailure = useCallback((failure) => {
     console.error("LiveKit media device failure:", failure);
-    let message = "A hardware error occurred with your camera or microphone.";
+    
+    let message = "A hardware error occurred.";
     if (failure === MediaDeviceFailure.PermissionDenied) {
-      message = "Camera/mic permission denied. Please allow access in your browser settings.";
+      message = "Camera/mic permission denied or timed out.";
     } else if (failure === MediaDeviceFailure.NotFound) {
-      message = "No camera or microphone was found on this device.";
+      message = "No camera or microphone was found.";
     } else if (failure === MediaDeviceFailure.DeviceInUse) {
-      message = "Your camera or microphone is already in use by another application.";
+      message = "Your camera is already in use by another app.";
     }
-    setError(message);
+
+    alert(`${message}\n\nIf you just turned your camera off, wait 3 seconds for your hardware to reset before turning it back on.`);
+    
+    // REMOVED: setError(message); 
   }, []);
 
   if (error) {
