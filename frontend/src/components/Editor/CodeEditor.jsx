@@ -32,6 +32,7 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
   const handleEditorMount = (editor, monaco) => {
     monacoInstanceRef.current = monaco;
     editorRef.current = editor;
+    editor.getModel().setEOL(monaco.editor.EndOfLineSequence.LF);
     setEditorReady(true);
   };
 

@@ -47,3 +47,4 @@ export default function VideoArea() {
     </LiveKitRoom>
   );
 }
+export default React.memo(VideoArea);
