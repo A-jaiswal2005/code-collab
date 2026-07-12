@@ -1,84 +1,31 @@
-import React from "react";
-import VideoTile from "./VideoTile.jsx";
-import { useRoom } from "../../context/RoomContext.jsx";
-import { useWebRTC } from "../../hooks/useWebRTC.js";
+import React from 'react';
+import VideoArea from '../Room/VideoArea';
 
 export default function Sidebar() {
-  const { users, socket, leaveRoom } = useRoom();
-  
-  const { 
-    localStream, 
-    remoteStreams, 
-    muted, 
-    toggleMute, 
-    cameraOff, 
-    toggleCamera, 
-    micError,
-    remoteCameraStates 
-  } = useWebRTC();
-
   return (
-    <aside style={styles.wrapper}>
-      <div style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <span>Participants ({users.length})</span>
-          
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button 
-              style={styles.muteBtn} 
-              onClick={toggleCamera}
-              title={cameraOff ? "Turn Camera On" : "Turn Camera Off"}
-            >
-              {cameraOff ? "📷 (Off)" : "📸"}
-            </button>
-            <button 
-              style={styles.muteBtn} 
-              onClick={toggleMute}
-              title={muted ? "Unmute" : "Mute"}
-            >
-              {muted ? "🔇" : "🎙️"}
-            </button>
-          </div>
-        </div>
-
-        <div style={styles.tileList}>
-          {users.map((u) => {
-            const isLocal = u.socketId === socket?.id;
-            
-            const isVideoOn = isLocal 
-              ? !cameraOff 
-              : (remoteCameraStates[u.socketId] ?? true);
-            
-            return (
-              <VideoTile
-                key={u.socketId}
-                username={u.username}
-                isLocal={isLocal}
-                muted={isLocal ? muted : false} 
-                stream={isLocal ? localStream : remoteStreams[u.socketId]}
-                isVideoOn={isVideoOn} 
-              />
-            );
-          })}
-        </div>
-
-        {micError && <p style={styles.micWarning}>Media unavailable: {micError}</p>}
+    <div style={styles.sidebarContainer}>
+      {/* You can keep any existing chat or user list components here if you want */}
+      
+      <div style={styles.videoWrapper}>
+        {/* LiveKit handles the entire grid and all the media controls */}
+        <VideoArea />
       </div>
-
-      <button style={styles.leaveBtn} onClick={leaveRoom}>
-        Leave Room
-      </button>
-    </aside>
+    </div>
   );
 }
 
-// FIXED: Added the styles object back!
 const styles = {
-  wrapper: { width: "100%", height: "100%", display: "flex", flexDirection: "column", gap: 14, padding: 14, background: "var(--bg-secondary)", borderLeft: "1px solid var(--border-color)", boxSizing: "border-box" },
-  section: { display: "flex", flexDirection: "column", gap: 8, flex: 1 },
-  sectionHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 },
-  muteBtn: { background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: 6, padding: "4px 8px", fontSize: 13, cursor: "pointer" },
-  tileList: { display: "flex", flexDirection: "column", gap: 8, overflowY: "auto" },
-  micWarning: { fontSize: 11, color: "var(--warning)" },
-  leaveBtn: { background: "transparent", border: "1px solid var(--danger)", color: "var(--danger)", padding: "8px", borderRadius: "var(--radius)", fontSize: 13, cursor: "pointer", marginTop: "auto" },
+  sidebarContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    width: '100%',
+    background: 'var(--bg-panel)',
+    borderLeft: '1px solid var(--border-color)',
+  },
+  videoWrapper: {
+    flex: 1,
+    minHeight: 0, // Allows the LiveKit grid to size properly inside a flex container
+    width: '100%',
+  }
 };
