@@ -24,8 +24,8 @@ import {
 } from "lucide-react";
 import "@livekit/components-styles";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
-const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "https://code-collab-n4p0.onrender.com";
+const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || "wss://code-collab-05ybur4t.livekit.cloud";
 
 // ---------------------------------------------------------------------------
 // Custom vertical video grid (Camera + ScreenShare tracks only)
