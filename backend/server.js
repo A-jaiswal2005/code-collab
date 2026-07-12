@@ -20,6 +20,7 @@ const { setupWSConnection } = require("y-websocket/bin/utils");
 
 const judge0Router = require("./routes/judge0");
 const roomManager = require("./utils/roomManager");
+const livekitRouter = require("./routes/livekit"); // <-- Import the new router
 
 const PORT = process.env.PORT || 4000;
 
@@ -29,6 +30,7 @@ app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 app.use("/api", judge0Router);
+app.use("/api/livekit", livekitRouter); // <-- Mount the LiveKit route
 
 const httpServer = http.createServer(app);
 
@@ -43,10 +45,8 @@ io.on("connection", (socket) => {
   let currentRoom = null;
   let currentUsername = null;
 
-  // ---- Room CREATE (Admin Only) --------------------------------
   socket.on("room:create", ({ roomId, username }, callback) => {
     currentUsername = username || `Guest-${socket.id.slice(0, 4)}`;
-    
     const result = roomManager.createRoom(roomId, socket.id, currentUsername);
     
     if (result.error) {
@@ -56,15 +56,12 @@ io.on("connection", (socket) => {
 
     currentRoom = roomId;
     socket.join(roomId);
-    
     if (typeof callback === "function") callback({ success: true });
     io.to(roomId).emit("room:users", result.users);
   });
 
-  // ---- Room JOIN (Strict Gatekeeper) ---------------------------
   socket.on("room:join", ({ roomId, username }, callback) => {
     currentUsername = username || `Guest-${socket.id.slice(0, 4)}`;
-    
     const result = roomManager.joinRoom(roomId, socket.id, currentUsername);
 
     if (result.error) {
@@ -74,20 +71,17 @@ io.on("connection", (socket) => {
 
     currentRoom = roomId;
     socket.join(roomId);
-    
     if (typeof callback === "function") callback({ success: true });
 
     socket.to(roomId).emit("room:peer-joined", { socketId: socket.id, username: currentUsername });
     io.to(roomId).emit("room:users", result.users);
 
-    // Auto-Sync Whiteboard: Ask the admin for the current state
     const adminId = roomManager.getAdmin(roomId);
     if (adminId && adminId !== socket.id) {
       io.to(adminId).emit("whiteboard:please-send-sync", socket.id);
     }
   });
 
-  // ---- Room leave ----------------------------------------------
   socket.on("room:leave", () => {
     if (!currentRoom) return;
     roomManager.leaveRoom(currentRoom, socket.id);
@@ -97,23 +91,10 @@ io.on("connection", (socket) => {
     currentRoom = null;
   });
 
-  // ---- Broadcasts & Signaling ----------------------------------
   socket.on("terminal:broadcast", ({ roomId, result }) => {
     socket.to(roomId).emit("terminal:result", result);
   });
 
-  socket.on("webrtc:signal", ({ to, from, signal }) => {
-    io.to(to).emit("webrtc:signal", { from, signal });
-  });
-
-  socket.on("webrtc:camera-toggle", ({ roomId, isVideoOn }) => {
-    socket.to(roomId).emit("room:peer-camera-changed", {
-      socketId: socket.id,
-      isVideoOn: isVideoOn
-    });
-  });
-
-  // ---- Whiteboard Sync Logic -----------------------------------
   socket.on("whiteboard:update", ({ roomId, snapshot }) => {
     socket.to(roomId).emit("whiteboard:update", snapshot);
   });
@@ -122,7 +103,6 @@ io.on("connection", (socket) => {
     io.to(toSocketId).emit("whiteboard:initial-sync", snapshot);
   });
 
-  // ---- Disconnect ----------------------------------------------
   socket.on("disconnect", () => {
     console.log(`[socket.io] client disconnected: ${socket.id}`);
     if (currentRoom) {
