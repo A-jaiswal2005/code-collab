@@ -23,8 +23,11 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
   const monacoInstanceRef = useRef(null);
   const [editorReady, setEditorReady] = useState(false);
 
-  // We dynamically name the Yjs text object based on the language!
-  const getYText = useCallback(() => ydoc.getText(`monaco-${language}`), [ydoc, language]);
+  // THE FIX 2: Added a guard to ensure ydoc exists before trying to fetch text
+  const getYText = useCallback(() => {
+    if (!ydoc) return null;
+    return ydoc.getText(`monaco-${language}`);
+  }, [ydoc, language]);
 
   const handleEditorMount = (editor, monaco) => {
     monacoInstanceRef.current = monaco;
@@ -32,30 +35,25 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
     setEditorReady(true);
   };
 
-  // Bind Monaco <-> Yjs, and auto-update whenever the language changes
   useEffect(() => {
-    if (!editorReady || !provider || !monacoInstanceRef.current) return undefined;
+    if (!editorReady || !provider || !monacoInstanceRef.current || !ydoc) return undefined;
 
     const editor = editorRef.current;
     const yText = getYText();
+    if (!yText) return;
 
-    // THE FIX: Only inject snippets AFTER the provider has finished syncing with the room
     const handleSync = (isSynced) => {
-      // If we are fully synced and the document is STILL empty, it's a fresh room/language.
       if (isSynced && yText.length === 0) {
         yText.insert(0, DEFAULT_SNIPPETS[language] || "");
       }
     };
 
-    // If already synced (e.g., when switching languages mid-session), run immediately
     if (provider.synced) {
       handleSync(true);
     } else {
-      // Otherwise, wait for the initial connection to finish syncing
       provider.on("synced", handleSync);
     }
 
-    // Bind the editor to the new language's shared text
     bindingRef.current = new MonacoBinding(
       yText,
       editor.getModel(),
@@ -64,16 +62,18 @@ export default function CodeEditor({ language, onLanguageChange, editorRef, onRu
     );
 
     return () => {
-      // Clean up the event listener to prevent memory leaks
       provider.off("synced", handleSync);
       
-      // When switching languages, destroy the old binding...
-      bindingRef.current?.destroy();
-      bindingRef.current = null;
-      // ...and clear the visual editor so the new language code can load cleanly
-      editor.setValue(""); 
+      if (bindingRef.current) {
+        bindingRef.current.destroy();
+        bindingRef.current = null;
+      }
+      
+      // THE FIX 3: Removed `editor.setValue("")` here. 
+      // Wiping the editor on unmount destroys the cursor position and 
+      // undo history. MonacoBinding handles swapping the text natively now.
     };
-  }, [editorReady, provider, getYText, editorRef, language]);
+  }, [editorReady, provider, ydoc, getYText, editorRef, language]);
 
   return (
     <div 

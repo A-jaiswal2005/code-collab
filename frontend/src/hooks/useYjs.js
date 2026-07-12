@@ -1,60 +1,49 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 
 const YWEBSOCKET_URL = import.meta.env.VITE_YWEBSOCKET_URL || "wss://code-collab-n4p0.onrender.com/yjs";
 
-/**
- * useYjs
- * ---------------------------------------------------------------
- * Creates (once per roomId) a Y.Doc + WebsocketProvider pair that
- * connects to the backend's /yjs endpoint. The returned `ydoc` is
- * shared by the Monaco binding (y-monaco) so every keystroke is
- * synced conflict-free across all connected clients.
- * ---------------------------------------------------------------
- */
 export function useYjs(roomId, username) {
-  const [status, setStatus] = useState("connecting"); // connecting | connected | disconnected
-  const [provider, setProvider] = useState(null);
-  const docRef = useRef(null);
-
-  if (!docRef.current) {
-    docRef.current = new Y.Doc();
-  }
+  const [status, setStatus] = useState("connecting"); 
+  const [yjsState, setYjsState] = useState({ ydoc: null, provider: null });
 
   useEffect(() => {
     if (!roomId) return undefined;
 
-    const wsProvider = new WebsocketProvider(YWEBSOCKET_URL, roomId, docRef.current, {
+    // THE FIX 1: Create a fresh document scoped EXACTLY to this room session.
+    // (Using a ref previously caused old data to leak across room changes)
+    const doc = new Y.Doc();
+    
+    const wsProvider = new WebsocketProvider(YWEBSOCKET_URL, roomId, doc, {
       connect: true,
     });
 
     wsProvider.on("status", ({ status: s }) => setStatus(s));
 
-    // Awareness lets peers see each other's cursor position/name -
-    // y-monaco automatically renders remote cursors using this.
     wsProvider.awareness.setLocalStateField("user", {
       name: username || "Anonymous",
       color: stringToColor(username || "Anonymous"),
     });
 
-    setProvider(wsProvider);
+    setYjsState({ ydoc: doc, provider: wsProvider });
 
     return () => {
+      wsProvider.disconnect();
       wsProvider.destroy();
-      setProvider(null);
+      doc.destroy();
+      setYjsState({ ydoc: null, provider: null });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId]);
+  }, [roomId, username]); 
 
   return {
-    ydoc: docRef.current,
-    provider,
+    ydoc: yjsState.ydoc,
+    provider: yjsState.provider,
     status,
   };
 }
 
-// Deterministic color per username, so cursors are stable across sessions.
 function stringToColor(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
