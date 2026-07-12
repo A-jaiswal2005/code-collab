@@ -70,18 +70,20 @@ function VideoArea() {
 
   return (
     <LiveKitRoom
-      video={true} 
+      video={false} 
       audio={true} 
       token={token}
       serverUrl={LIVEKIT_URL}
       data-lk-theme="default"
       style={styles.liveKitContainer}
-      videoCaptureDefaults={{
-        resolution: { width: 640, height: 480, frameRate: 24 }
-      }}
+      videoCaptureDefaults={{ resolution: { width: 640, height: 480, frameRate: 15 }}}
       options={{
         adaptiveStream: true,
         dynacast: true,
+      }}
+      onMediaDeviceFailure={(error) => {
+        console.error("Media Device Error:", error);
+        alert(`Camera/Mic error: ${error.message}. Make sure no other app is using your camera.`);
       }}
     >
       <LayoutContextProvider>
