@@ -1,31 +1,53 @@
-import React from 'react';
-import VideoArea from '../Room/VideoArea';
+// Sidebar.jsx
+// Right-hand panel of MainLayout. Hosts the LiveKit video call, controls, and chat.
+// All the LiveKit-specific logic lives in VideoArea.jsx — this component just
+// provides the sidebar chrome (header + scroll-safe flex container).
+import VideoArea from "./VideoArea";
 
-export default function Sidebar() {
+export default function Sidebar({ roomId, username }) {
   return (
-    <div style={styles.sidebarContainer}>
-      {/* You can keep any existing chat or user list components here if you want */}
-      
-      <div style={styles.videoWrapper}>
-        {/* LiveKit handles the entire grid and all the media controls */}
-        <VideoArea />
+    <aside style={styles.sidebar}>
+      <div style={styles.header}>
+        <span style={styles.headerTitle}>Room · {roomId}</span>
       </div>
-    </div>
+
+      {/* flex:1 + minHeight:0 lets VideoArea fill remaining space and manage
+          its own internal scrolling without growing the sidebar itself */}
+      <div style={styles.videoAreaWrapper}>
+        <VideoArea roomId={roomId} username={username} />
+      </div>
+    </aside>
   );
 }
 
 const styles = {
-  sidebarContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-    width: '100%',
-    background: 'var(--bg-panel)',
-    borderLeft: '1px solid var(--border-color)',
+  sidebar: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    width: "340px",
+    minWidth: "280px",
+    backgroundColor: "#181825",
+    borderLeft: "1px solid #313244",
+    flexShrink: 0,
   },
-  videoWrapper: {
+  header: {
+    flexShrink: 0,
+    padding: "14px 16px",
+    borderBottom: "1px solid #313244",
+    backgroundColor: "#11111b",
+  },
+  headerTitle: {
+    color: "#cdd6f4",
+    fontSize: "13px",
+    fontWeight: 600,
+    letterSpacing: "0.02em",
+  },
+  videoAreaWrapper: {
     flex: 1,
-    minHeight: 0, // Allows the LiveKit grid to size properly inside a flex container
-    width: '100%',
-  }
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
 };
