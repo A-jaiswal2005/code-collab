@@ -44,6 +44,7 @@ jobs:
         env:
           VITE_BACKEND_URL: "https://code-collab-n4p0.onrender.com"
           VITE_YWEBSOCKET_URL: "wss://code-collab-n4p0.onrender.com/yjs"
+          VITE_LIVEKIT_URL: "wss://code-collab-05ybur4t.livekit.cloud"
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v4
