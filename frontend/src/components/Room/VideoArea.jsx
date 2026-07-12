@@ -57,7 +57,7 @@ function VideoArea() {
   // Completely leaves the room and goes back to the home screen
   const handleLeaveRoom = () => {
     // Navigating away automatically unmounts LiveKit and drops the call
-    window.location.href = "/"; 
+    window.location.reload();
   };
 
   if (!token) {
