@@ -141,5 +141,5 @@ const styles = {
   // Terminal now gets a much smaller flex ratio
   terminalWrapper: { flex: 1.2, borderRight: "1px solid var(--border-color)", minWidth: 280, maxWidth: 450 },
   
-  sidebarWrapper: { width: "260px", flexShrink: 0 },
+  sidebarWrapper: { width: "320px", flexShrink: 0 },
 };

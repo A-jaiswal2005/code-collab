@@ -6,7 +6,9 @@ import {
   ParticipantTile, 
   ControlBar, 
   RoomAudioRenderer, 
-  useTracks 
+  useTracks,
+  Chat,
+  LayoutContextProvider
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import { useRoom } from "../../context/RoomContext.jsx";
@@ -14,7 +16,6 @@ import { useRoom } from "../../context/RoomContext.jsx";
 const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
-// Custom grid that pulls only cameras and screen shares, organizing them vertically
 function CustomVideoGrid() {
   const tracks = useTracks(
     [
@@ -53,6 +54,12 @@ function VideoArea() {
     fetchToken();
   }, [roomId, username]);
 
+  // Completely leaves the room and goes back to the home screen
+  const handleLeaveRoom = () => {
+    // Navigating away automatically unmounts LiveKit and drops the call
+    window.location.href = "/"; 
+  };
+
   if (!token) {
     return (
       <div style={styles.loadingContainer}>
@@ -69,19 +76,40 @@ function VideoArea() {
       serverUrl={LIVEKIT_URL}
       data-lk-theme="default"
       style={styles.liveKitContainer}
+      videoCaptureDefaults={{
+        resolution: { width: 640, height: 480, frameRate: 24 }
+      }}
+      options={{
+        adaptiveStream: true,
+        dynacast: true,
+      }}
     >
-      {/* Video feeds take up the top portion */}
-      <CustomVideoGrid />
+      <LayoutContextProvider>
+        
+        {/* The Video Feeds */}
+        <CustomVideoGrid />
+        
+        {/* The Chat UI */}
+        <Chat style={styles.chatOverlay} />
 
-      {/* Controls stay locked at the bottom, slimmed down to fit the sidebar */}
-      <div style={styles.controlsContainer}>
-        <ControlBar 
-          variation="minimal" 
-          controls={{ chat: false, screenShare: true, camera: true, microphone: true, leave: true }} 
-        />
-      </div>
+        {/* The Controls Area */}
+        <div style={styles.controlsWrapper}>
+          
+          {/* LiveKit Controls: Notice leave is set to false */}
+          <ControlBar 
+            variation="minimal" 
+            controls={{ chat: true, screenShare: true, camera: true, microphone: true, leave: false }} 
+          />
 
-      {/* Required to actually hear other people */}
+          {/* Big Custom Leave Button below the 4 main controls */}
+          <button style={styles.leaveButton} onClick={handleLeaveRoom}>
+            Leave Meeting
+          </button>
+          
+        </div>
+
+      </LayoutContextProvider>
+
       <RoomAudioRenderer />
     </LiveKitRoom>
   );
@@ -99,27 +127,51 @@ const styles = {
     display: 'flex', 
     flexDirection: 'column', 
     height: '100%', 
-    width: '100%' 
+    width: '100%',
+    position: 'relative'
   },
   gridContainer: { 
     flex: 1, 
     overflowY: 'auto', 
-    padding: '8px' 
+    padding: '8px',
+    display: 'flex',
+    flexDirection: 'column'
   },
   gridLayout: {
     display: 'flex',
-    flexDirection: 'column', // Forces stacking in the sidebar
-    gap: '8px'
+    flexDirection: 'column', 
+    gap: '8px',
+    flex: 1
   },
-  controlsContainer: {
-    padding: '12px 8px',
+  chatOverlay: {
+    maxHeight: '50%', 
+    borderTop: '1px solid var(--border-color)'
+  },
+  
+  // Updated Controls Wrapper to stack items vertically
+  controlsWrapper: {
+    padding: '16px 12px',
     background: 'var(--bg-tertiary, #181825)',
     borderTop: '1px solid var(--border-color)',
     display: 'flex',
-    justifyContent: 'center',
-    flexWrap: 'wrap' // Ensures buttons wrap if screen gets too small
+    flexDirection: 'column', // Stacks ControlBar and Leave Button
+    alignItems: 'center',
+    gap: '12px' // Space between the 4 icons and the leave button
+  },
+  
+  // Custom Leave Button Styles
+  leaveButton: {
+    width: '100%', // Makes it stretch across the sidebar
+    padding: '10px 0',
+    backgroundColor: '#ef4444', // Red color
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '15px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s'
   }
 };
 
-// Single default export at the bottom fixes the build error
 export default React.memo(VideoArea);
