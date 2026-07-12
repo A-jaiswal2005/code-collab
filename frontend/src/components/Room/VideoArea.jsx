@@ -1,6 +1,7 @@
 // VideoArea.jsx
 // Requires: npm install @livekit/components-react @livekit/components-styles livekit-client lucide-react
 import { useEffect, useState, useCallback } from "react";
+import { useRoom } from "../../context/RoomContext.jsx";
 import {
   LiveKitRoom,
   useTracks,
@@ -208,7 +209,8 @@ function RoomContent() {
 // ---------------------------------------------------------------------------
 // Top-level export: fetches token, then mounts the LiveKit room
 // ---------------------------------------------------------------------------
-export default function VideoArea({ roomId, username }) {
+export default function VideoArea() {
+  const { roomId, username } = useRoom(); // Grab them from context!
   const [token, setToken] = useState("");
   const [serverUrl, setServerUrl] = useState(LIVEKIT_URL);
   const [error, setError] = useState(null);
