@@ -14,7 +14,6 @@ import {
   useRoomContext,
   LayoutContextProvider,
 } from "@livekit/components-react";
-import { Track, MediaDeviceFailure } from "livekit-client";
 import {
   Mic,
   MicOff,
