@@ -2,7 +2,7 @@
 // Requires: npm install @livekit/components-react @livekit/components-styles livekit-client lucide-react
 import { useEffect, useState, useCallback } from "react";
 import { useRoom } from "../../context/RoomContext.jsx";
-import { Track, MediaDeviceFailure, VideoPresets } from "livekit-client"; 
+import { Track, MediaDeviceFailure} from "livekit-client"; 
 import {
   LiveKitRoom,
   useTracks,
@@ -246,8 +246,7 @@ export default function VideoArea() {
   adaptiveStream: false,
   dynacast: false,
   videoCaptureDefaults: {
-    resolution: VideoPresets.h480.resolution, // Uses standard 640x480
-    frameRate: 15,
+    resolution: { width: 640, height: 480, frameRate: 15 },
   },
   publishDefaults: {
     simulcast: false,
