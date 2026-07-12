@@ -2,6 +2,7 @@
 // Requires: npm install @livekit/components-react @livekit/components-styles livekit-client lucide-react
 import { useEffect, useState, useCallback } from "react";
 import { useRoom } from "../../context/RoomContext.jsx";
+import { Track, MediaDeviceFailure, VideoPresets } from "livekit-client"; 
 import {
   LiveKitRoom,
   useTracks,
@@ -242,6 +243,19 @@ export default function VideoArea() {
     };
   }, [roomId, username]);
 
+  const roomOptions = {
+  adaptiveStream: false,
+  dynacast: false,
+  videoCaptureDefaults: {
+    resolution: VideoPresets.h480.resolution, // Uses standard 640x480
+    frameRate: 15,
+  },
+  publishDefaults: {
+    simulcast: false,
+    videoCodec: 'vp8',
+  },
+};
+
   // Handles hardware errors (permission denied, device in use, not found)
   // instead of letting LiveKit throw an uncaught exception on mount.
   const handleMediaDeviceFailure = useCallback((failure) => {
@@ -284,6 +298,7 @@ export default function VideoArea() {
       token={token}
       serverUrl={serverUrl}
       connect={true}
+      options={roomOptions}
       onMediaDeviceFailure={handleMediaDeviceFailure}
       onDisconnected={() => window.location.reload()}
       data-lk-theme="default"
