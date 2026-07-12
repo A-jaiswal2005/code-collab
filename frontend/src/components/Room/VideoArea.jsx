@@ -276,7 +276,7 @@ export default function VideoArea() {
   return (
     <LiveKitRoom
       video={false}
-      audio={true}
+      audio={false}
       token={token}
       serverUrl={serverUrl}
       connect={true}
