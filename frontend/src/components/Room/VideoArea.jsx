@@ -345,11 +345,10 @@ const styles = {
     flexDirection: "column",
     height: "100%",
     width: "100%",
-    maxWidth: "100%",
-    boxSizing: "border-box", // Prevents border/padding from pushing width > 100%
+    boxSizing: "border-box", 
     backgroundColor: "#11111b",
     position: "relative",
-    overflow: "hidden", // CRITICAL: Hides the chat drawer when it translates off-screen
+    overflow: "hidden", 
   },
   roomContentWrapper: {
     flex: 1,
@@ -357,10 +356,12 @@ const styles = {
     overflow: "hidden", 
     minHeight: 0,
     width: "100%",
+    display: "flex",           // Added to ensure children fill properly
+    flexDirection: "column",   // Added
     boxSizing: "border-box",
   },
   gridWrapper: {
-    height: "100%",
+    flex: 1,                   // Changed from height: 100% for better flex behavior
     width: "100%",
     overflowY: "auto",
     padding: "8px",
@@ -418,9 +419,9 @@ const styles = {
   chatDrawer: {
     position: "absolute",
     top: 0,
-    right: 0,
+    left: 0,                   // Changed from width: 100% to left: 0 / right: 0
+    right: 0,                  // This strictly anchors it to the parent's width
     bottom: 0,
-    width: "100%", // Exactly fits the sidebar
     backgroundColor: "#181825",
     borderLeft: "1px solid #313244",
     display: "flex",
@@ -456,8 +457,9 @@ const styles = {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    overflow: "hidden", // We let the .lk-chat-messages handle the scrolling
+    overflow: "hidden", 
     boxSizing: "border-box",
+    width: "100%",             // Added to ensure it doesn't collapse
   },
   loadingContainer: {
     display: "flex",
