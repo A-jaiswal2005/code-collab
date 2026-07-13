@@ -1,0 +1,95 @@
+[33m58ec2c1f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Refactor VideoArea for restored functionality and states
+[33m144e7afd[m Update VideoArea.jsx
+[33mdc845f43[m Add loading animation to RoomJoin component
+[33m6e7d2329[m Update VideoArea.jsx
+[33m7830a5fa[m Add VideoArea.css for video room styling
+[33mb0fa3e6b[m Refactor VideoArea component and improve structure
+[33m385a7a5a[m Refactor VideoArea styles and layout
+[33m5bc0ee39[m video toggle
+[33m9fd150ee[m Remove manualChunks from Vite build configuration
+[33m19fa98a2[m video toggle
+[33mb4076b93[m video toggle
+[33m3aae5a5b[m video toggle
+[33mce9b9333[m video toggle
+[33m45264233[m room contex
+[33mce0606ee[m changes-for url
+[33mef8e35b3[m new-lib
+[33m347249c1[m video toggle
+[33mbca45dcc[m video toggle
+[33me01ad823[m video toggle
+[33m54b6cd07[m Leave button
+[33m1138176d[m improved ui
+[33mb03c166c[m Improved Layout
+[33mb4b15985[m fix: resolve yjs line ending distortion and camera remount loop
+[33m6aff061b[m Remove React.StrictMode from rendering
+[33mebb6c922[m message: "fix: update useYjs hook to handle Yjs document changes correctly"
+[33m62c90845[m Change LiveKit URL in main-deploy.yml
+[33maf24d758[m final commit
+[33md9024cb6[m feat: complete LiveKit SFU migration for scalable video mesh and screen sharing
+[33mf6ec2fc9[m Implement media fallback and update WebRTC logic
+[33m5096659b[m Enhance Whiteboard with auto-sync and shortcut handling
+[33m0f0b5bb2[m Enhance room management and add whiteboard sync
+[33m921df3a8[m Refactor snippet injection logic for language sync
+[33m749f4835[m Implement room creation and joining functionality
+[33m92a3f449[m Implement createRoom and enhance joinRoom methods
+[33m094d1cc0[m Update server.js
+[33mc03cb100[m Add createRoom functionality to RoomJoin component
+[33m44486a9c[m Enhance RoomManager with admin tracking and validation
+[33m94777100[m Refactor README.md for better formatting
+[33m3a50762e[m Revise README for clarity and feature updates
+[33m5928a721[m Add audio level hook and speaking glow effect
+[33m69e82005[m Add useAudioLevel hook for audio level detection
+[33m16ee9f6d[m Refactor VideoTile to handle audio separately
+[33mb3f506ff[m Enhance Sidebar button accessibility and styles
+[33mb08e7693[m Enhance VideoTile with audio support
+[33m42b9e4ee[m Add remote camera state handling in Sidebar component
+[33ma6063a10[m Enhance WebRTC hook with remote camera state tracking
+[33mf57e2093[m Add camera toggle UI state socket event
+[33m54a48709[m Refactor VideoTile for improved video management
+[33m696e2b08[m Refactor Sidebar component and update styles
+[33m96e495dc[m Refactor useWebRTC for improved media handling
+[33mf545a9ab[m Implement camera toggle functionality in useWebRTC
+[33mbdc2999d[m Refactor Sidebar for local stream and toggle buttons
+[33me1ab5826[m Enhance VideoTile with video toggle functionality
+[33m36771feb[m Refactor VideoTile component layout and styles
+[33m935162d3[m Add camera toggle and group controls in Sidebar
+[33mbe36e083[m Enable video in getUserMedia for WebRTC
+[33mb6ac1e45[m Add video playback to VideoTile component
+[33mcd8b210d[m Update CodeEditor.jsx
+[33m4ba82980[m Enhance CodeEditor with Java support and snippet logic
+[33m9f16c851[m Rename deploy.yml to main-deploy.yml
+[33mc938724c[m Update deployment environment to Ubuntu 22.04
+[33mc40523b6[m Adjust flex ratios for editor and terminal in layout
+[33m53745570[m Refactor MainLayout to include stdin handling
+[33m99f4c7b9[m Enhance CodeEditor with run code feature
+[33m76806699[m Update MainLayout.jsx
+[33m5ba6a596[m Update Terminal.jsx
+[33m40b3b49a[m Move Terminal component to Editor directory
+[33mddd4f263[m Refactor Sidebar component to simplify props
+[33m15969781[m Fix compiler IDs for C, C++, and Java
+[33m2fff842b[m Rewrite judge0.js for OnlineCompiler.io integration
+[33m1321d4f1[m Prevent keystrokes from bubbling in CodeEditor
+[33m251e8634[m Prevent Tldraw from swallowing Monaco keystrokes
+[33m313e9fc9[m Update MainLayout.jsx
+[33m7fb772b7[m Update BACKEND_URL to production server
+[33mcc089d43[m Update useYjs.js
+[33m6d509a3b[m Fix simple-peer crash by adding Node polyfills to Vite
+[33m1b1fd729[m Set backend and websocket URLs for deployment
+[33mbf18de8d[m Refactor CORS settings and improve URL handling
+[33m678ad3fd[m Modify GitHub Actions workflow for frontend deployment
+[33m96dca12f[m Update deploy.yml
+[33me57b898b[m Set base path for Vite configuration
+[33m38bea956[m Add GitHub Actions workflow for frontend deployment
+[33me6eed861[m Fix Codespaces networking and replace Judge0 with Piston
+[33m02801893[m Add files via upload
+[33m5f0d4655[m Delete code-collab directory
+[33mb7c16f1c[m Add files via upload
+[33m640e2166[m Delete docker-compose.yml
+[33m9313a72d[m Delete frontend directory
+[33mea797b8e[m Delete backend directory
+[33maa7d9622[m Add files via upload
+[33mdff8dc62[m Delete backend
+[33m2abe7f82[m Delete frontend/src directory
+[33mbf50022f[m Create backend
+[33m21f8d7f7[m Add files via upload
+[33m0368096a[m Initial commit
