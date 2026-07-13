@@ -72,6 +72,12 @@ function CustomVideoGrid() {
           display: flex !important;
           flex-direction: column !important;
         }
+
+        /* HIDE LIVEKIT'S BUILT-IN HEADER */
+        .lk-chat-header {
+          display: none !important; 
+        }
+
         .lk-chat-messages {
           flex: 1 1 auto !important;
           padding: 8px !important;
