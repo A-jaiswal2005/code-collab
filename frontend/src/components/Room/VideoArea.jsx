@@ -71,6 +71,7 @@ function CustomVideoGrid() {
           margin: 0 !important;
           display: flex !important;
           flex-direction: column !important;
+          box-sizing: border-box !important;
         }
 
         /* HIDE LIVEKIT'S BUILT-IN HEADER */
@@ -82,16 +83,24 @@ function CustomVideoGrid() {
           flex: 1 1 auto !important;
           padding: 8px !important;
           margin: 0 !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
         }
+        
         .lk-chat-form {
           padding: 12px 8px !important;
           margin: 0 !important;
           border-top: 1px solid #313244 !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
         }
+        
         .lk-chat-form-input {
           background-color: #313244 !important;
           color: #cdd6f4 !important;
           border: 1px solid #45475a !important;
+          box-sizing: border-box !important;
+          min-width: 0 !important; /* Prevents input from stretching past container */
         }
       `}</style>
       <GridLayout tracks={tracks} className="sidebar-video-grid">
