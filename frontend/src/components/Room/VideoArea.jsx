@@ -1,8 +1,7 @@
 // VideoArea.jsx
-// Requires: npm install @livekit/components-react @livekit/components-styles livekit-client lucide-react
 import { useEffect, useState, useCallback } from "react";
 import { useRoom } from "../../context/RoomContext.jsx";
-import { Track, MediaDeviceFailure} from "livekit-client"; 
+import { Track, MediaDeviceFailure } from "livekit-client"; 
 import {
   LiveKitRoom,
   useTracks,
@@ -42,8 +41,10 @@ function CustomVideoGrid() {
 
   return (
     <div style={styles.gridWrapper}>
-      {/* Force GridLayout's internal CSS grid into a single vertical column,
-          since it renders inside a narrow sidebar rather than a full page. */}
+      {/* 
+        Force GridLayout's internal CSS grid into a single vertical column.
+        Also overrides the default LiveKit chat to fit in the sidebar drawer cleanly.
+      */}
       <style>{`
         .sidebar-video-grid.lk-grid-layout {
           display: flex !important;
@@ -57,6 +58,34 @@ function CustomVideoGrid() {
           flex-shrink: 0;
           border-radius: 8px;
           overflow: hidden;
+        }
+        
+        /* OVERRIDE LIVEKIT CHAT DEFAULT STYLES TO FIT SIDEBAR */
+        .lk-chat {
+          width: 100% !important;
+          height: 100% !important;
+          max-width: 100% !important;
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+        .lk-chat-messages {
+          flex: 1 1 auto !important;
+          padding: 8px !important;
+          margin: 0 !important;
+        }
+        .lk-chat-form {
+          padding: 12px 8px !important;
+          margin: 0 !important;
+          border-top: 1px solid #313244 !important;
+        }
+        .lk-chat-form-input {
+          background-color: #313244 !important;
+          color: #cdd6f4 !important;
+          border: 1px solid #45475a !important;
         }
       `}</style>
       <GridLayout tracks={tracks} className="sidebar-video-grid">
@@ -78,6 +107,8 @@ function SlidingChat({ isOpen, onClose }) {
       style={{
         ...styles.chatDrawer,
         transform: isOpen ? "translateX(0)" : "translateX(100%)",
+        // When closed, disable pointer events so it can't be interacted with
+        pointerEvents: isOpen ? "auto" : "none",
       }}
       aria-hidden={!isOpen}
     >
@@ -92,7 +123,7 @@ function SlidingChat({ isOpen, onClose }) {
         </button>
       </div>
       <div style={styles.chatBody}>
-        <Chat style={{ height: "100%" }} />
+        <Chat />
       </div>
     </div>
   );
@@ -200,24 +231,22 @@ function RoomContent() {
         isChatOpen={isChatOpen}
         onToggleChat={() => setChatOpen((v) => !v)}
       />
-
       <RoomAudioRenderer />
     </LayoutContextProvider>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Top-level export: fetches token, then mounts the LiveKit room
+// Top-level export
 // ---------------------------------------------------------------------------
 export default function VideoArea() {
-  const { roomId, username } = useRoom(); // Grab them from context!
+  const { roomId, username } = useRoom(); 
   const [token, setToken] = useState("");
   const [serverUrl, setServerUrl] = useState(LIVEKIT_URL);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-
     async function fetchToken() {
       try {
         const res = await fetch(
@@ -235,7 +264,6 @@ export default function VideoArea() {
         if (!cancelled) setError(err.message || "Failed to fetch LiveKit token.");
       }
     }
-
     if (roomId && username) fetchToken();
     return () => {
       cancelled = true;
@@ -243,34 +271,20 @@ export default function VideoArea() {
   }, [roomId, username]);
 
   const roomOptions = {
-  adaptiveStream: false,
-  dynacast: false,
-  videoCaptureDefaults: {
-    resolution: { width: 640, height: 480, frameRate: 15 },
-  },
-  publishDefaults: {
-    simulcast: false,
-    videoCodec: 'vp8',
-  },
-};
+    adaptiveStream: false,
+    dynacast: false,
+    videoCaptureDefaults: { resolution: { width: 640, height: 480, frameRate: 15 } },
+    publishDefaults: { simulcast: false, videoCodec: 'vp8' },
+  };
 
-  // Handles hardware errors (permission denied, device in use, not found)
-  // instead of letting LiveKit throw an uncaught exception on mount.
   const handleMediaDeviceFailure = useCallback((failure) => {
     console.error("LiveKit media device failure:", failure);
-    
     let message = "A hardware error occurred.";
-    if (failure === MediaDeviceFailure.PermissionDenied) {
-      message = "Camera/mic permission denied or timed out.";
-    } else if (failure === MediaDeviceFailure.NotFound) {
-      message = "No camera or microphone was found.";
-    } else if (failure === MediaDeviceFailure.DeviceInUse) {
-      message = "Your camera is already in use by another app.";
-    }
+    if (failure === MediaDeviceFailure.PermissionDenied) message = "Camera/mic permission denied or timed out.";
+    else if (failure === MediaDeviceFailure.NotFound) message = "No camera or microphone was found.";
+    else if (failure === MediaDeviceFailure.DeviceInUse) message = "Your camera is already in use by another app.";
 
     alert(`${message}\n\nIf you just turned your camera off, wait 3 seconds for your hardware to reset before turning it back on.`);
-    
-    // REMOVED: setError(message); 
   }, []);
 
   if (error) {
@@ -308,7 +322,7 @@ export default function VideoArea() {
 }
 
 // ---------------------------------------------------------------------------
-// Styles — dark theme
+// Styles 
 // ---------------------------------------------------------------------------
 const styles = {
   liveKitRoom: {
@@ -316,15 +330,19 @@ const styles = {
     flexDirection: "column",
     height: "100%",
     width: "100%",
+    maxWidth: "100%",
+    boxSizing: "border-box", // Prevents border/padding from pushing width > 100%
     backgroundColor: "#11111b",
     position: "relative",
-    overflow: "hidden",
+    overflow: "hidden", // CRITICAL: Hides the chat drawer when it translates off-screen
   },
   roomContentWrapper: {
     flex: 1,
     position: "relative",
-    overflow: "hidden",
+    overflow: "hidden", 
     minHeight: 0,
+    width: "100%",
+    boxSizing: "border-box",
   },
   gridWrapper: {
     height: "100%",
@@ -348,6 +366,8 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "10px",
+    boxSizing: "border-box",
+    width: "100%",
   },
   controlsRow: {
     display: "flex",
@@ -385,14 +405,15 @@ const styles = {
     top: 0,
     right: 0,
     bottom: 0,
-    width: "100%",
+    width: "100%", // Exactly fits the sidebar
     backgroundColor: "#181825",
     borderLeft: "1px solid #313244",
     display: "flex",
     flexDirection: "column",
-    transition: "transform 0.28s ease",
+    transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
     zIndex: 20,
     boxShadow: "-4px 0 16px rgba(0,0,0,0.4)",
+    boxSizing: "border-box",
   },
   chatHeader: {
     display: "flex",
@@ -401,6 +422,7 @@ const styles = {
     padding: "12px 16px",
     borderBottom: "1px solid #313244",
     flexShrink: 0,
+    boxSizing: "border-box",
   },
   chatHeaderTitle: {
     color: "#cdd6f4",
@@ -417,8 +439,10 @@ const styles = {
   },
   chatBody: {
     flex: 1,
-    overflowY: "auto",
-    padding: "0 8px",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden", // We let the .lk-chat-messages handle the scrolling
+    boxSizing: "border-box",
   },
   loadingContainer: {
     display: "flex",

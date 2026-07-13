@@ -1,9 +1,5 @@
 // Sidebar.jsx
-// Right-hand panel of MainLayout. Hosts the LiveKit video call, controls, and chat.
-// All the LiveKit-specific logic lives in VideoArea.jsx — this component just
-// provides the sidebar chrome (header + scroll-safe flex container).
 import VideoArea from "../Room/VideoArea";
-
 export default function Sidebar({ roomId, username }) {
   return (
     <aside style={styles.sidebar}>
@@ -19,7 +15,6 @@ export default function Sidebar({ roomId, username }) {
     </aside>
   );
 }
-
 const styles = {
   sidebar: {
     display: "flex",
